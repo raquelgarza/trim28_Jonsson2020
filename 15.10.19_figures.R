@@ -145,7 +145,7 @@ p_TE_meanplot_emx <- meanPlot_cus(emx_TE_exp$Mean, test=emx_TE_res, p=0.05, c1='
 ggsave(p_TE_meanplot_emx, file="6_TEtranscripts/invivo_bd/plots/TE_meanplot.svg", width=20, height=20, units="cm", dpi=96)
 
 emx_TE_norm <- emx_TE
-emx_TE_norm[] <- mapply('*', emx_TE_norm, emx_genes_dds$sizeFactor)
+emx_TE_norm[] <- mapply('/', emx_TE_norm, emx_genes_dds$sizeFactor)
 emx_TE_norm$TE_subfamily <- as.character(unlist(lapply(strsplit(rownames(emx_TE_norm), ':'), `[[`, 1)))
 emx_TE_norm$TE_family <- unlist(lapply(strsplit(rownames(emx_TE_norm), ':'), `[[`, 2))
 emx_TE_norm$TE_class <- unlist(lapply(strsplit(rownames(emx_TE_norm), ':'), `[[`, 3))
@@ -153,26 +153,13 @@ emx_TE_norm$TE_family <- as.character(ifelse(endsWith((emx_TE_norm$TE_family), '
 emx_TE_norm$TE_class <- as.character(ifelse(endsWith((emx_TE_norm$TE_class), '?'), substr(emx_TE_norm$TE_class, 1, (nchar(emx_TE_norm$TE_class)-1)),emx_TE_norm$TE_class))
 emx_TE_norm <- emx_TE_norm[which(emx_TE_norm$TE_class %in% c('LINE', 'LTR', 'SINE')),]
 
-emx_TE_signdiff_retro <- rownames(emx_TE_res[which(emx_TE_res$padj < 0.05 ),])[which(rownames(emx_TE_res[which(emx_TE_res$padj < 0.05 ),]) %in% rownames(emx_TE_norm))]
-emx_TE_norm$ID <- rownames(emx_TE_norm)
+emx_TE_signdiff_condition <- melt(emx_TE_exp$Mean)
+emx_TE_signdiff_condition <- emx_TE_signdiff_condition[emx_TE_signdiff_condition$Var1 %in% rownames(subset(emx_TE_res, emx_TE_res$padj < 0.05)),]
+emx_TE_signdiff_condition$value <- log2(emx_TE_signdiff_condition$value+0.5)
+colnames(emx_TE_signdiff_condition) <- c('TE_subfamily', 'Condition', 'log2Mean')
 
-emx_TE_signdiff_retro <- emx_TE_norm[emx_TE_signdiff_retro, as.character(emx_coldata$samples)]
-
-emx_TE_signdiff_retro_ko <- as.data.frame(rowMeans(emx_TE_signdiff_retro[,endsWith(colnames(emx_TE_signdiff_retro), 'ko')]))
-emx_TE_signdiff_retro_ko$condition <- 'ko'
-emx_TE_signdiff_retro_ko$TE_subfamily <- as.character(unlist(lapply(strsplit(rownames(emx_TE_signdiff_retro_ko), ':'), `[[`, 1)))
-colnames(emx_TE_signdiff_retro_ko) <- c('mean_expression', 'condition', 'TE_subfamily')
-
-emx_TE_signdiff_retro_ctrl <- as.data.frame(rowMeans(emx_TE_signdiff_retro[,endsWith(colnames(emx_TE_signdiff_retro), 'ctrl')]))
-emx_TE_signdiff_retro_ctrl$condition <- 'ctrl'
-emx_TE_signdiff_retro_ctrl$TE_subfamily <- as.character(unlist(lapply(strsplit(rownames(emx_TE_signdiff_retro_ctrl), ':'), `[[`, 1)))
-colnames(emx_TE_signdiff_retro_ctrl) <- c('mean_expression', 'condition', 'TE_subfamily')
-
-emx_TE_signdiff_retro_condition <- rbind(emx_TE_signdiff_retro_ko, emx_TE_signdiff_retro_ctrl)
-emx_TE_signdiff_retro_condition$mean_expression <- log2(emx_TE_signdiff_retro_condition$mean_expression+0.5)
-
-p_signdiff_TE_emx <- ggplot(data=emx_TE_signdiff_retro_condition, aes(x=TE_subfamily, y=mean_expression)) +   
-  geom_bar(aes(fill = condition, width=0.7), position = "dodge", stat="identity") + theme_classic()+labs(y="log2(mean normalized read counts)", x="TE subfamily", fill="Condition")+
+p_signdiff_TE_emx <- ggplot(data=emx_TE_signdiff_condition, aes(x=TE_subfamily, y=log2Mean)) +   
+  geom_bar(aes(fill = Condition, width=0.7), position = "dodge", stat="identity") + theme_classic()+labs(y="log2(mean normalized read counts)", x="TE subfamily", fill="Condition")+
   theme(axis.text.x = element_text(angle = 90, hjust = 1))+ scale_fill_manual(values=c("steelblue", "tomato2"))
 
 ggsave(p_signdiff_TE_emx, file='6_TEtranscripts/invivo_bd/plots/signdiff_TE.svg', width=25, height=10, units="cm", dpi=96)
@@ -207,7 +194,6 @@ npc_TE_dds <- DESeqDataSetFromMatrix(npc_TE[,rownames(npc_coldata)], npc_coldata
 npc_TE_dds <- DESeq(npc_TE_dds)
 npc_TE_res <- results(npc_TE_dds)
 npc_TE_exp <- getAverage(npc_TE_dds)
-
 
 p_TE_meanplot_npc <- meanPlot_cus(npc_TE_exp$Mean, test=npc_TE_res, col2 = 'black', col3 = 'firebrick', p=0.05, c1='ko', c2='ctrl',ttl='', repel = F)  + labs(title="", subtitle="")
 ggsave(p_TE_meanplot_npc, file="6_TEtranscripts/invitro_crispr/plots/TE_meanplot.svg", width=20, height=20, units="cm", dpi=96)
@@ -249,7 +235,7 @@ npc_gene_expressed <- npc_gene[which(apply(npc_gene, 1, more_10) > 0),]
 write(rownames(npc_gene_expressed), 'GO_analysis/invitro_crispr/background_npc.txt')
 
 npc_TE_norm <- npc_TE
-npc_TE_norm[] <- mapply('*', npc_TE_norm, npc_genes_dds$sizeFactor)
+npc_TE_norm[] <- mapply('/', npc_TE_norm, npc_genes_dds$sizeFactor)
 npc_TE_norm$TE_subfamily <- as.character(unlist(lapply(strsplit(rownames(npc_TE_norm), ':'), `[[`, 1)))
 npc_TE_norm$TE_family <- unlist(lapply(strsplit(rownames(npc_TE_norm), ':'), `[[`, 2))
 npc_TE_norm$TE_class <- unlist(lapply(strsplit(rownames(npc_TE_norm), ':'), `[[`, 3))
@@ -261,21 +247,13 @@ npc_TE_norm$ID <- rownames(npc_TE_norm)
 npc_TE_signdiff_retro <- rownames(npc_TE_res[which(npc_TE_res$padj < 0.05 ),])[which(rownames(npc_TE_res[which(npc_TE_res$padj < 0.05 ),]) %in% rownames(npc_TE_norm))]
 npc_TE_signdiff_retro <- npc_TE_norm[npc_TE_signdiff_retro, as.character(npc_coldata$samples)]
 
-npc_TE_signdiff_retro_ko <- as.data.frame(rowMeans(npc_TE_signdiff_retro[,rownames(subset(npc_coldata, npc_coldata$condition == 'ko'))]))
-npc_TE_signdiff_retro_ko$condition <- 'ko'
-npc_TE_signdiff_retro_ko$TE_subfamily <- as.character(unlist(lapply(strsplit(rownames(npc_TE_signdiff_retro_ko), ':'), `[[`, 1)))
-colnames(npc_TE_signdiff_retro_ko) <- c('mean_expression', 'condition', 'TE_subfamily')
+npc_TE_signdiff_condition <- melt(npc_TE_exp$Mean)
+npc_TE_signdiff_condition <- npc_TE_signdiff_condition[npc_TE_signdiff_condition$Var1 %in% rownames(subset(npc_TE_res, npc_TE_res$padj < 0.05)),]
+npc_TE_signdiff_condition$value <- log2(npc_TE_signdiff_condition$value+0.5)
+colnames(npc_TE_signdiff_condition) <- c('TE_subfamily', 'Condition', 'log2Mean')
 
-npc_TE_signdiff_retro_ctrl <- as.data.frame(rowMeans(npc_TE_signdiff_retro[,rownames(subset(npc_coldata, npc_coldata$condition == 'ctrl'))]))
-npc_TE_signdiff_retro_ctrl$condition <- 'ctrl'
-npc_TE_signdiff_retro_ctrl$TE_subfamily <- as.character(unlist(lapply(strsplit(rownames(npc_TE_signdiff_retro_ctrl), ':'), `[[`, 1)))
-colnames(npc_TE_signdiff_retro_ctrl) <- c('mean_expression', 'condition', 'TE_subfamily')
-
-npc_TE_signdiff_retro_condition <- rbind(npc_TE_signdiff_retro_ko, npc_TE_signdiff_retro_ctrl)
-npc_TE_signdiff_retro_condition$mean_expression <- log2(npc_TE_signdiff_retro_condition$mean_expression+0.5)
-
-p_signdiff_TE_npc <- ggplot(data=npc_TE_signdiff_retro_condition, aes(x=TE_subfamily, y=mean_expression)) +   
-  geom_bar(aes(fill = condition, width=0.7), position = "dodge", stat="identity") + theme_classic()+labs(y="log2(mean normalized read counts)", x="TE subfamily", fill="Condition")+
+p_signdiff_TE_npc <- ggplot(data=npc_TE_signdiff_condition, aes(x=TE_subfamily, y=log2Mean)) +   
+  geom_bar(aes(fill = Condition, width=0.7), position = "dodge", stat="identity") + theme_classic()+labs(y="log2(mean normalized read counts)", x="TE subfamily", fill="Condition")+
   theme(axis.text.x = element_text(angle = 90, hjust = 1))+ scale_fill_manual(values=c("steelblue", "tomato2"))
 
 ggsave(p_signdiff_TE_npc, file='6_TEtranscripts/invitro_crispr/plots/signdiff_TE.svg', width=25, height=15, units="cm", dpi=96)
