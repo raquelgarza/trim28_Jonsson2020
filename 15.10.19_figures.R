@@ -157,6 +157,32 @@ emx_TE_signdiff_condition <- melt(emx_TE_exp$Mean)
 emx_TE_signdiff_condition <- emx_TE_signdiff_condition[emx_TE_signdiff_condition$Var1 %in% rownames(subset(emx_TE_res, emx_TE_res$padj < 0.05)),]
 emx_TE_signdiff_condition$value <- log2(emx_TE_signdiff_condition$value+0.5)
 colnames(emx_TE_signdiff_condition) <- c('TE_subfamily', 'Condition', 'log2Mean')
+emx_TE_signdiff_condition$TE_class <- unlist(lapply(str_split(emx_TE_signdiff_condition$TE_subfamily, ':'), `[[`, 3))
+emx_TE_signdiff_condition$TE_family <- unlist(lapply(str_split(emx_TE_signdiff_condition$TE_subfamily, ':'), `[[`, 2))
+emx_TE_signdiff_condition$TE_subfamily <- unlist(lapply(str_split(emx_TE_signdiff_condition$TE_subfamily, ':'), `[[`, 1))
+
+emx_TE_signdiff_condition_mean <- emx_TE_exp$Mean[rownames(subset(emx_TE_res, emx_TE_res$padj < 0.05)),]
+emx_TE_signdiff_condition_mean <- as.data.frame(emx_TE_signdiff_condition_mean)
+emx_TE_signdiff_condition_mean$TE_subfamily <- unlist(lapply(str_split(rownames(emx_TE_signdiff_condition_mean), ":"), `[[`, 1))
+emx_TE_signdiff_condition_mean$TE_family <- unlist(lapply(str_split(rownames(emx_TE_signdiff_condition_mean), ":"), `[[`, 2))
+emx_TE_signdiff_condition_mean$TE_class <- unlist(lapply(str_split(rownames(emx_TE_signdiff_condition_mean), ":"), `[[`, 3))
+rownames(emx_TE_signdiff_condition_mean) <- emx_TE_signdiff_condition_mean$TE_subfamily
+
+TE_class_list <- colorRampPalette(rev(brewer.pal(n = 7, name = "GnBu")))(120)[seq(20,100,20)]
+names(TE_class_list) <- unique(emx_TE_signdiff_condition_mean$TE_class)
+TE_family_list <- colorRampPalette(rev(brewer.pal(n = 7, name = "Purples")))(140)[seq(20,120,20)]
+names(TE_family_list) <- unique(emx_TE_signdiff_condition_mean$TE_family)
+
+classification_colors = list(TE_class = TE_class_list, TE_family = TE_family_list)
+
+p_signdiff_TE_emx_annotation <- pheatmap(log2(emx_TE_signdiff_condition_mean[,c(1,2), drop=F]+0.5), 
+                                         cluster_cols = F, 
+                                         cluster_rows = F,
+                                         annotation_row = emx_TE_signdiff_condition_mean[, c('TE_class', 'TE_family')], 
+                                         color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdBu")))(100),
+                                         annotation_colors=classification_colors,
+                                         main="Significantly different TE subfamilies in Emx animals\nTrim28 (padj < 0.05, log2FC > 0)")
+ggsave(p_signdiff_TE_emx_annotation, file='6_TEtranscripts/invivo_bd/plots/signdiff_TE_heatmap.svg', width=20, height=20, units="cm", dpi=96)
 
 p_signdiff_TE_emx <- ggplot(data=emx_TE_signdiff_condition, aes(x=TE_subfamily, y=log2Mean)) +   
   geom_bar(aes(fill = Condition, width=0.7), position = "dodge", stat="identity") + theme_classic()+labs(y="log2(mean normalized read counts)", x="TE subfamily", fill="Condition")+
@@ -251,6 +277,29 @@ npc_TE_signdiff_condition <- melt(npc_TE_exp$Mean)
 npc_TE_signdiff_condition <- npc_TE_signdiff_condition[npc_TE_signdiff_condition$Var1 %in% rownames(subset(npc_TE_res, npc_TE_res$padj < 0.05)),]
 npc_TE_signdiff_condition$value <- log2(npc_TE_signdiff_condition$value+0.5)
 colnames(npc_TE_signdiff_condition) <- c('TE_subfamily', 'Condition', 'log2Mean')
+
+npc_TE_signdiff_condition_mean <- npc_TE_exp$Mean[rownames(subset(npc_TE_res, npc_TE_res$padj < 0.05)),]
+npc_TE_signdiff_condition_mean <- as.data.frame(npc_TE_signdiff_condition_mean)
+npc_TE_signdiff_condition_mean$TE_subfamily <- unlist(lapply(str_split(rownames(npc_TE_signdiff_condition_mean), ":"), `[[`, 1))
+npc_TE_signdiff_condition_mean$TE_family <- unlist(lapply(str_split(rownames(npc_TE_signdiff_condition_mean), ":"), `[[`, 2))
+npc_TE_signdiff_condition_mean$TE_class <- unlist(lapply(str_split(rownames(npc_TE_signdiff_condition_mean), ":"), `[[`, 3))
+rownames(npc_TE_signdiff_condition_mean) <- npc_TE_signdiff_condition_mean$TE_subfamily
+
+TE_class_list <- c(LTR="#21B6A8")
+TE_family_list <- colorRampPalette(rev(brewer.pal(n = 7, name = "Purples")))(100)[seq(10,80,20)]
+names(TE_family_list) <- unique(npc_TE_signdiff_condition_mean$TE_family)
+
+classification_colors = list(TE_class = TE_class_list, TE_family = TE_family_list)
+
+p_signdiff_TE_npc_annotation <- pheatmap(log2(npc_TE_signdiff_condition_mean[,c(1,2), drop=F]+0.5), 
+                                         cluster_cols = F, 
+                                         cluster_rows = F,
+                                         annotation_row = npc_TE_signdiff_condition_mean[, c('TE_class', 'TE_family')], 
+                                         color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdBu")))(100),
+                                         annotation_colors=classification_colors,
+                                         main="Significantly different TE subfamilies in npc animals\nTrim28 (padj < 0.05, log2FC > 0)")
+ggsave(p_signdiff_TE_npc_annotation, file='6_TEtranscripts/invitro_crispr/plots/signdiff_TE_heatmap.svg', width=20, height=25, units="cm", dpi=96)
+
 
 p_signdiff_TE_npc <- ggplot(data=npc_TE_signdiff_condition, aes(x=TE_subfamily, y=log2Mean)) +   
   geom_bar(aes(fill = Condition, width=0.7), position = "dodge", stat="identity") + theme_classic()+labs(y="log2(mean normalized read counts)", x="TE subfamily", fill="Condition")+
