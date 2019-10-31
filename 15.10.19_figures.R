@@ -8,7 +8,120 @@ library("deseqAbstraction")
 library('pheatmap')
 library('ggplot2')
 library('DESeq2')
+library('rjson')
+library('Hmisc')
 # Functions ----
+GO_json <- function(file_name, prefix, botlog2fc=NULL, toplog2fc=NULL, morethan=NULL, ttl=''){
+  json <- fromJSON(file=file_name)
+  json$overrepresentation$group[[1]]$result[[1]]$input_list$number_in_list
+  results <- vector("list",  length(json$overrepresentation$group))
+  for(j in 1:length(results)){
+    
+    for(i in 1:length(json$overrepresentation$group[[j]]$result)){
+      
+      if(length(json$overrepresentation$group[[j]]$result[[i]]) > 1){
+        if(!is.null(json$overrepresentation$group[[j]]$result[[i]]$input_list$number_in_list)){
+          if(json$overrepresentation$group[[j]]$result[[i]]$input_list$number_in_list > 0 ){
+            tmp <- data.frame(GO_label= json$overrepresentation$group[[j]]$result[[i]]$term$label,
+                              GO_id = json$overrepresentation$group[[j]]$result[[i]]$term$id,
+                              gene_id=paste(json$overrepresentation$group[[j]]$result[[i]]$input_list$mapped_id_list$mapped_id, collapse=', '),
+                              fold_enrichment=json$overrepresentation$group[[j]]$result[[i]]$input_list$fold_enrichment,
+                              sign=json$overrepresentation$group[[j]]$result[[i]]$input_list$plus_minus,
+                              expected=json$overrepresentation$group[[j]]$result[[i]]$input_list$expected,
+                              fdr=json$overrepresentation$group[[j]]$result[[i]]$input_list$fdr,
+                              pval = json$overrepresentation$group[[j]]$result[[i]]$input_list$pValue)
+            
+            
+            results[[j]] <- rbind(results[[j]], tmp)
+          }
+        }
+      }
+    }
+    
+  }
+  
+  results <- results[-which(sapply(results, is.null))]
+  results <- results[which(sapply(results, nrow) != 0)]
+  results_df <- do.call(rbind, results)
+  
+  results_df$log2fold_enrichment <- log2(results_df$fold_enrichment+0.5)
+  
+  results_df$gene_id <- as.character(results_df$gene_id)
+  
+  if(startsWith(results_df$gene_id[1], 'ENS')){
+    transcript_gene <- fread('annotation/mm10/gencode/gencode.vM20.annotation.transc.gene.tab', data.table = FALSE, header=FALSE)
+    colnames(transcript_gene) <- c('transcript_id', 'gene_id', 'gene_name', 'gene_type')
+    
+    transcript_gene$gene_id_panther <- unlist(lapply(str_split(transcript_gene$gene_id, '[.]'), `[[` , 1))
+    results_df$gene_name <- rep(NULL, nrow(results_df))
+    
+    for (i in 1:length(results_df$gene_id)){
+      tmp <- as.data.frame(str_split(results_df$gene_id, ', ')[[i]])
+      colnames(tmp) <- 'gene_id_panther'
+      tmp2 <- merge(tmp, unique(transcript_gene[,c(3,5)]), by='gene_id_panther')
+      tmp2 <- tmp2[match(tmp$gene_id_panther, tmp2$gene_id_panther),]
+      colnames(tmp2) <- c('gene_id', 'gene_name')
+      results_df[i,'gene_name'] <- paste(tmp2$gene_name, collapse=', ')
+    }
+    
+    
+  }
+  
+  write.xlsx(x=results_df[order(results_df$fdr), ], file=paste(prefix, '.xlsx', sep = ''), col.names = T, row.names = F)
+  
+  results_df_filtered <- results_df
+  if(!is.null(toplog2fc)){
+    if(!is.null(botlog2fc)){
+      results_df_filtered <- subset(results_df, results_df$log2fold_enrichment > toplog2fc | results_df$log2fold_enrichment < botlog2fc)
+    }
+    else{
+      results_df_filtered <- subset(results_df, results_df$log2fold_enrichment > toplog2fc)
+    }
+  }else{
+    if(!is.null(botlog2fc)){
+      results_df_filtered <- subset(results_df, results_df$log2fold_enrichment < botlog2fc)
+    }
+  }
+  if(!is.null(morethan)){
+    results_df_filtered <- results_df_filtered[which(unlist(lapply(str_split(results_df_filtered$gene_id, ', '), length)) > morethan),]
+  }
+  # results_df_filtered <- subset(results_df_filtered, results_df_filtered$pval < pvalue)
+  
+  results_df_filtered$GO_label <- as.character(results_df_filtered$GO_label)
+  for(i in 1:nrow(results_df_filtered)){
+    if(length(unlist(str_split(as.character(results_df_filtered[i,'GO_label']), " "))) > 10){
+      newline <- ceiling(length(unlist(str_split(as.character(results_df_filtered[i,'GO_label']), " ")))/2)
+      no_words <- floor(length(unlist(str_split(as.character(results_df_filtered[i,'GO_label']), " ")))) 
+      results_df_filtered[i,'GO_label'] <- paste(c(unlist(str_split(as.character(results_df_filtered[i,'GO_label']), " "))[1:newline], "\n", unlist(str_split(as.character(results_df_filtered[i,'GO_label']), " "))[(newline+2):no_words]), collapse = " ")
+    }  
+  }
+  results_df_filtered$fdr_log10 <- -log10(results_df_filtered$fdr)
+  results_df_filtered$num_of_genes <- unlist(lapply(str_split(results_df_filtered$gene_id, ', '), FUN=length))
+  
+  steps <- ceiling((max(results_df_filtered$num_of_genes) - min(results_df_filtered$num_of_genes))/5)
+  results_df_filtered$num_of_genes <- cut2(results_df_filtered$num_of_genes, seq(min(results_df_filtered$num_of_genes), max(results_df_filtered$num_of_genes), steps), digits=0, oneval=FALSE)
+  
+  results_df_filtered$num_of_genes <- sub(',', '-', gsub('^.|.$', '', as.character(results_df_filtered$num_of_genes)))
+  
+  library(RColorBrewer)
+  getPalette = brewer.pal(length(unique(results_df_filtered$num_of_genes))+1, "Blues")[-1]
+  results_df_filtered$GO_label <- factor(results_df_filtered$GO_label, levels=results_df_filtered[order(results_df_filtered$fdr, decreasing = T),'GO_label'])
+  
+  plot <- ggplot(data=results_df_filtered, aes(x=GO_label, y=log2fold_enrichment)) +
+    geom_bar(stat="identity", aes(fill=num_of_genes))+
+    expand_limits(y=c(min(results_df_filtered$log2fold_enrichment), (max(results_df_filtered$log2fold_enrichment)+0.5)))+
+    xlab("GO term") + ylab("\nlog2(Fold Change)")+ theme_bw()+ theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip() +
+    geom_hline(yintercept=0, color='black')+
+    geom_point(aes(y=fdr_log10), size=3) + scale_y_continuous(sec.axis = sec_axis(~.*1, name = "-log10(padj)"))+
+    geom_hline(yintercept=-log10(0.05), linetype='dashed', color='red')+ scale_fill_manual(values=getPalette) + labs(fill="Num. of genes") +
+    theme(text = element_text(size=18), axis.text.x = element_text(angle=90, hjust=1)) 
+  
+  
+  
+  ggsave(plot, file=paste(prefix, '_fdr.svg', sep = ''), width=32, height=length(results_df_filtered$GO_label)/1.2, units="cm")
+  
+  return(results_df_filtered)
+}
 more_10 <- function(row){
   return(length(which(row > 10)))
 }
@@ -97,6 +210,9 @@ emx_genes_dds <- DESeqDataSetFromMatrix(emx_gene[,rownames(emx_coldata)], emx_co
 emx_genes_dds <- DESeq(emx_genes_dds)
 emx_genes_res <- results(emx_genes_dds)
 emx_genes_exp <- getAverage(emx_genes_dds)
+emx_genes_res_df <- as.data.frame(emx_genes_res)
+emx_genes_res_df$ci_low <- emx_genes_res_df$log2FoldChange - (qnorm(0.05)*emx_genes_res_df$lfcSE)
+emx_genes_res_df$ci_high <- emx_genes_res_df$log2FoldChange + (qnorm(0.05)*emx_genes_res_df$lfcSE)
 
 p_gene_meanplot_emx <- meanPlot_cus(emx_genes_exp$Mean, test=emx_genes_res, p=0.05, c1='ko', c2='ctrl',ttl='Gene DEA in Cre Loxp experiment', repel = FALSE) + labs(title="", subtitle="")
 ggsave(p_gene_meanplot_emx, file="6_TEtranscripts/invivo_bd/plots/gene_meanplot.svg", width=20, height=20, units="cm", dpi=96)
@@ -183,6 +299,12 @@ p_signdiff_TE_emx_annotation <- pheatmap(log2(emx_TE_signdiff_condition_mean[,c(
                                          annotation_colors=classification_colors,
                                          main="Significantly different TE subfamilies in Emx animals\nTrim28 (padj < 0.05, log2FC > 0)")
 ggsave(p_signdiff_TE_emx_annotation, file='6_TEtranscripts/invivo_bd/plots/signdiff_TE_heatmap.svg', width=20, height=20, units="cm", dpi=96)
+
+emx_TE_res_df <-  as.data.frame(emx_TE_res)
+emx_TE_res_df$TE_subfamily <- unlist(lapply(str_split(rownames(emx_TE_res_df), ':'), `[[`, 1))
+
+emx_TE_signdiff_condition <- merge(emx_TE_signdiff_condition, emx_TE_res_df[,c('TE_subfamily', 'padj')], by='TE_subfamily')
+emx_TE_signdiff_condition$TE_subfamily <- factor(emx_TE_signdiff_condition$TE_subfamily, levels=unique(emx_TE_signdiff_condition[order(emx_TE_signdiff_condition$padj),'TE_subfamily']))
 
 p_signdiff_TE_emx <- ggplot(data=emx_TE_signdiff_condition, aes(x=TE_subfamily, y=log2Mean)) +   
   geom_bar(aes(fill = Condition, width=0.7), position = "dodge", stat="identity") + theme_classic()+labs(y="log2(mean normalized read counts)", x="TE subfamily", fill="Condition")+
@@ -277,6 +399,7 @@ npc_TE_signdiff_condition <- melt(npc_TE_exp$Mean)
 npc_TE_signdiff_condition <- npc_TE_signdiff_condition[npc_TE_signdiff_condition$Var1 %in% rownames(subset(npc_TE_res, npc_TE_res$padj < 0.05)),]
 npc_TE_signdiff_condition$value <- log2(npc_TE_signdiff_condition$value+0.5)
 colnames(npc_TE_signdiff_condition) <- c('TE_subfamily', 'Condition', 'log2Mean')
+npc_TE_signdiff_condition$TE_subfamily <- unlist(lapply(str_split(npc_TE_signdiff_condition$TE_subfamily, ":"), `[[`, 1))
 
 npc_TE_signdiff_condition_mean <- npc_TE_exp$Mean[rownames(subset(npc_TE_res, npc_TE_res$padj < 0.05)),]
 npc_TE_signdiff_condition_mean <- as.data.frame(npc_TE_signdiff_condition_mean)
@@ -300,6 +423,13 @@ p_signdiff_TE_npc_annotation <- pheatmap(log2(npc_TE_signdiff_condition_mean[,c(
                                          main="Significantly different TE subfamilies in npc animals\nTrim28 (padj < 0.05, log2FC > 0)")
 ggsave(p_signdiff_TE_npc_annotation, file='6_TEtranscripts/invitro_crispr/plots/signdiff_TE_heatmap.svg', width=20, height=25, units="cm", dpi=96)
 
+
+
+npc_TE_res_df <-  as.data.frame(npc_TE_res)
+npc_TE_res_df$TE_subfamily <- unlist(lapply(str_split(rownames(npc_TE_res_df), ':'), `[[`, 1))
+
+npc_TE_signdiff_condition <- merge(npc_TE_signdiff_condition, npc_TE_res_df[,c('TE_subfamily', 'padj')], by='TE_subfamily')
+npc_TE_signdiff_condition$TE_subfamily <- factor(npc_TE_signdiff_condition$TE_subfamily, levels=unique(npc_TE_signdiff_condition[order(npc_TE_signdiff_condition$padj),'TE_subfamily']))
 
 p_signdiff_TE_npc <- ggplot(data=npc_TE_signdiff_condition, aes(x=TE_subfamily, y=log2Mean)) +   
   geom_bar(aes(fill = Condition, width=0.7), position = "dodge", stat="identity") + theme_classic()+labs(y="log2(mean normalized read counts)", x="TE subfamily", fill="Condition")+
@@ -504,6 +634,77 @@ p_viral_defence <- ggplot() +
   geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = -0.5, ymax = 0.5), fill = 'lightpink',  alpha = 0.3,size = 2)
 ggsave(p_viral_defence, file="6_TEtranscripts/invivo_bd/plots/viral_defence.svg", width=20, height=20, units="cm", dpi=96)
 
+# Invivo bd immune response
+immune_response <- fread('/Volumes/Seagate Backup /trim28/09.10.19/GO_analysis/invivo_bd/inmmune_response_GO0006954.tab', data.table = F)
+immune_response <- immune_response$V1
+immune_response <- tools::toTitleCase(tolower(immune_response))
+immune_response <- data.frame(gene_name=immune_response)
+
+immune_response <- unique(merge(immune_response, transcript_gene[,c(2,3)], by='gene_name'))
+
+emx_gene_norm_immune_response <- emx_gene_norm[which(emx_gene_norm$gene_name %in% immune_response$gene_name),c('gene_name', as.character(emx_coldata$samples))]
+rownames(emx_gene_norm_immune_response) <- emx_gene_norm_immune_response$gene_name
+emx_gene_norm_immune_response_more10 <- emx_gene_norm_immune_response[which(rowSums(emx_gene_norm_immune_response[,emx_coldata$samples]) > 10),]
+emx_gene_norm_immune_response_more10 <- merge(emx_gene_norm_immune_response_more10, unique(transcript_gene[,c(2,3)]), by='gene_name')
+
+emx_immune_response_fc <- emx_genes_res_df[immune_response$gene_id,c('log2FoldChange', 'ci_low', 'ci_high'), drop=FALSE]
+emx_immune_response_fc <- merge(emx_immune_response_fc, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
+emx_immune_response_fc$reg <- ifelse(emx_immune_response_fc$log2FoldChange < 0, 'logFC < 0', 'logFC > 0')
+emx_immune_response_fc$gene_name <- factor(emx_immune_response_fc$gene_name, levels=emx_immune_response_fc[order(emx_immune_response_fc$log2FoldChange, decreasing=TRUE),'gene_name'])
+
+emx_immune_response_fc <- emx_immune_response_fc[which(emx_immune_response_fc$Row.names %in% emx_gene_norm_immune_response_more10$gene_id),]
+emx_immune_response_fc_goodconfint <- subset(emx_immune_response_fc, (emx_immune_response_fc$ci_low > 0 & emx_immune_response_fc$ci_high > 0) | (emx_immune_response_fc$ci_low < 0 & emx_immune_response_fc$ci_high < 0))
+
+p_immune_response <- ggplot() + 
+  geom_errorbar(data=emx_immune_response_fc_goodconfint, mapping=aes(x=gene_name, ymin=ci_low, ymax=ci_high, colour=reg), width=0.2) + 
+  geom_point(stat='identity',data=emx_immune_response_fc_goodconfint, mapping=aes(x=gene_name, y=log2FoldChange, colour=reg)) + coord_flip()+theme_bw() + scale_colour_manual(values=c("steelblue", 'tomato')) +
+  guides(fill=FALSE)+
+  labs(x="Gene name", y= 'log2 Fold Change', title='Change of expression on immune response genes at CreLoxP Trim28 KO\nError lines of 95% confidence intervals', colour="KO Relative expression")+
+  theme(
+    plot.title = element_text(size = 18),
+    axis.text.x = element_text(size = 15),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 13),
+    axis.text.y = element_text(size = 15),
+    axis.title.x = element_text(size = 15,margin = margin(t = 20, r = 0, b = 0, l = 0)),
+    axis.title.y = element_text(size = 15,margin = margin(t = 0, r = 20, b = 0, l = 0)))+
+  geom_hline(yintercept = 0, color = "black", size=0.5)+
+  geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = -0.5, ymax = 0.5), fill = 'lightpink',  alpha = 0.3,size = 2)
+
+p_immune_response_complete <- ggplot() + 
+  geom_errorbar(data=emx_immune_response_fc, mapping=aes(x=gene_name, ymin=ci_low, ymax=ci_high, colour=reg), width=0.2) + 
+  geom_point(stat='identity',data=emx_immune_response_fc, mapping=aes(x=gene_name, y=log2FoldChange, colour=reg)) + coord_flip()+theme_bw() + scale_colour_manual(values=c("steelblue", 'tomato')) +
+  guides(fill=FALSE)+
+  labs(x="Gene name", y= 'log2 Fold Change', title='Change of expression on immune response genes at CreLoxP Trim28 KO\nError lines of 95% confidence intervals', colour="KO Relative expression")+
+  theme(
+    plot.title = element_text(size = 18),
+    axis.text.x = element_text(size = 15),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 13),
+    axis.text.y = element_text(size = 15),
+    axis.title.x = element_text(size = 15,margin = margin(t = 20, r = 0, b = 0, l = 0)),
+    axis.title.y = element_text(size = 15,margin = margin(t = 0, r = 20, b = 0, l = 0)))+
+  geom_hline(yintercept = 0, color = "black", size=0.5)+
+  geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = -0.5, ymax = 0.5), fill = 'lightpink',  alpha = 0.3,size = 2)
+
+ggsave(p_immune_response_complete, file="6_TEtranscripts/invivo_bd/plots/immune_response_complete.svg", width=40, height=100, units="cm", dpi=96)
+ggsave(p_immune_response, file="6_TEtranscripts/invivo_bd/plots/immune_response.svg", width=30, height=20, units="cm", dpi=96)
+# GO Biological process ----
+GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/slim_biological_process_upreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/slim_biological_process_upreg_emx', morethan = 2,  botlog2fc = -0.5, toplog2fc = 0.5)
+GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/slim_biological_process_downreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/slim_biological_process_downreg_emx', morethan = 2,  botlog2fc = -0.5, toplog2fc = 0.5)
+
+# GO Biological process without adult ----
+GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/not_in_adult/slim_biological_process_upreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/not_in_adult/slim_biological_process_upreg_emx_not_in_adult', morethan = 2, botlog2fc = -0.5, toplog2fc = 0.5)
+GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/not_in_adult/slim_biological_process_downreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/not_in_adult/slim_biological_process_downreg_emx_not_in_adult', morethan = 2, botlog2fc = -0.5, toplog2fc = 0.5)
+
+# GO Molecular function ----
+GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/slim_molecular_function_upreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/slim_molecular_function_upreg_emx', morethan = 2, botlog2fc = -0.5, toplog2fc = 0.5)
+View(GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/slim_molecular_function_downreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/slim_molecular_function_downreg_emx', morethan = 2, botlog2fc = -0.5, toplog2fc = 0.5))
+
+# GO Molecular function without adult ----
+GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/not_in_adult/slim_molecular_function_upreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/not_in_adult/slim_molecular_function_upreg_emx_not_in_adult', morethan = 2, toplog2fc = 0.5)
+GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/not_in_adult/slim_molecular_function_downreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/not_in_adult/slim_molecular_function_downreg_emx_not_in_adult', morethan = 2, botlog2fc = -0.5, toplog2fc = 0.5)
+
 # EMX ERVK upregulated ----
 ERVK_count <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/ERVK_count_matrix_2.csv', data.table = F)
 ERVK_coldata <- data.frame(sample=unlist(lapply(str_split(colnames(ERVK_count)[7:ncol(ERVK_count)], '/'), `[[`, 5)),
@@ -524,4 +725,5 @@ write.table(ERVK_count[ERVK_upreg,c('Chr', 'Start', 'End', 'Geneid', 'Strand')],
 ERVK_not_upreg <- rownames(ERVK_res[which(!ERVK_res$log2FoldChange > 0 | is.na(ERVK_res$log2FoldChange)),])
 ERVK_not_upreg <- ERVK_not_upreg[which(ERVK_not_upreg %in% rownames(ERVK_res))]
 write.table(ERVK_count[ERVK_not_upreg,c('Chr', 'Start', 'End', 'Geneid', 'Strand')], col.names = F, row.names = F, quote = F, sep='\t', file='10_nearbygenes/not_upregulated/emx_notupreg_ERVK.bed')
+
 
