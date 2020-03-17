@@ -11,6 +11,21 @@ library('DESeq2')
 library('rjson')
 library('Hmisc')
 # Functions ----
+getSignName <- function(x,p,l=0) {
+  
+  up <- x[!is.na(x$padj) & x$padj < p & x$log2FoldChange > l,]
+  down <- x[!is.na(x$padj) & x$padj < p & x$log2FoldChange < -l,]
+  return(list(up=rownames(up),down=rownames(down)))
+  
+}
+getAverage <- function(dds) {
+  
+  baseMeanPerLvl <- sapply( levels(dds$condition), function(lvl) rowMeans( counts(dds,normalized=TRUE)[,dds$condition == lvl] ) )
+  baseSDPerLvl <- sapply( levels(dds$condition), function(lvl) apply( counts(dds,normalized=TRUE)[,dds$condition == lvl],1,sd ) )
+  colnames(baseSDPerLvl) <- paste("st.dev:",colnames(baseSDPerLvl),sep="")
+  return(list(Mean=baseMeanPerLvl,SD=baseSDPerLvl))
+  
+}
 GO_json <- function(file_name, prefix, botlog2fc=NULL, toplog2fc=NULL, morethan=NULL, ttl=''){
   json <- fromJSON(file=file_name)
   json$overrepresentation$group[[1]]$result[[1]]$input_list$number_in_list
@@ -187,6 +202,7 @@ colnames(TE_classification) <- c('TE_id', 'TE_subfamily', 'TE_family', 'TE_class
 transcript_gene <- fread('/Volumes/Seagate Backup /annotation/mouse/gencode/gencode.vM20.annotation.transc.gene.tab', data.table = FALSE, header=FALSE)
 colnames(transcript_gene) <- c('transcript_id', 'gene_id', 'gene_name', 'gene_type')
 # EMX animals ----
+emx <- fread('../../msc/trim28/6_TEtranscripts/invivo_bd/invivo_bd.cntTable', data.table = F)
 emx <- fread('6_TEtranscripts/invivo_bd/invivo_bd.cntTable', data.table = F)
 colnames(emx)[-1] <- paste(unlist(lapply(strsplit(colnames(emx)[-1], '/'), `[[`, 5)), unlist(lapply(strsplit(colnames(emx)[-1], '/'), `[[`, 4)), sep='_')
 # Gene count
@@ -214,9 +230,8 @@ emx_genes_res_df <- as.data.frame(emx_genes_res)
 emx_genes_res_df$ci_low <- emx_genes_res_df$log2FoldChange - (qnorm(0.05)*emx_genes_res_df$lfcSE)
 emx_genes_res_df$ci_high <- emx_genes_res_df$log2FoldChange + (qnorm(0.05)*emx_genes_res_df$lfcSE)
 
-p_gene_meanplot_emx <- meanPlot_cus(emx_genes_exp$Mean, test=emx_genes_res, p=0.05, c1='ko', c2='ctrl',ttl='Gene DEA in Cre Loxp experiment', repel = FALSE) + labs(title="", subtitle="")
-ggsave(p_gene_meanplot_emx, file="6_TEtranscripts/invivo_bd/plots/gene_meanplot.svg", width=20, height=20, units="cm", dpi=96)
-
+p_gene_meanplot_emx <- meanPlot_cus(emx_genes_exp$Mean, test=emx_genes_res, l=0.5, p=0.05, c1='ko', c2='ctrl',ttl='Gene DEA in Cre Loxp experiment', repel = FALSE) + labs(title="", subtitle="")
+ggsave(p_gene_meanplot_emx, file="6_TEtranscripts/invivo_bd/plots/gene_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
 
 emx_gene_norm <- counts(emx_genes_dds, normalized = TRUE)
 emx_gene_norm <- merge(emx_gene_norm, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
@@ -257,8 +272,8 @@ emx_TE_dds <- DESeq(emx_TE_dds)
 emx_TE_res <- results(emx_TE_dds)
 emx_TE_exp <- getAverage(emx_TE_dds)
 
-p_TE_meanplot_emx <- meanPlot_cus(emx_TE_exp$Mean, test=emx_TE_res, p=0.05, c1='ko', c2='ctrl',ttl='TE DEA in Cre Loxp experiment', repel = FALSE, col3='firebrick', col2='black') + labs(title="", subtitle="")
-ggsave(p_TE_meanplot_emx, file="6_TEtranscripts/invivo_bd/plots/TE_meanplot.svg", width=20, height=20, units="cm", dpi=96)
+p_TE_meanplot_emx <- meanPlot_cus(emx_TE_exp$Mean, test=emx_TE_res, l=0.5, p=0.05, c1='ko', c2='ctrl',ttl='TE DEA in Cre Loxp experiment', repel = FALSE, col3='firebrick', col2='black') + labs(title="", subtitle="")
+ggsave(p_TE_meanplot_emx, file="6_TEtranscripts/invivo_bd/plots/TE_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
 
 emx_TE_norm <- emx_TE
 emx_TE_norm[] <- mapply('/', emx_TE_norm, emx_genes_dds$sizeFactor)
@@ -302,16 +317,18 @@ ggsave(p_signdiff_TE_emx_annotation, file='6_TEtranscripts/invivo_bd/plots/signd
 
 emx_TE_res_df <-  as.data.frame(emx_TE_res)
 emx_TE_res_df$TE_subfamily <- unlist(lapply(str_split(rownames(emx_TE_res_df), ':'), `[[`, 1))
+emx_TE_signdiff_condition <- subset(emx_TE_signdiff_condition, emx_TE_signdiff_condition$Condition == 'ko')
+emx_TE_signdiff_condition <- merge(emx_TE_signdiff_condition, emx_TE_res_df[,c('TE_subfamily', 'padj', 'log2FoldChange')], by='TE_subfamily')
+emx_TE_signdiff_condition$FoldChange <- 2^(emx_TE_signdiff_condition$log2FoldChange)
+emx_TE_signdiff_condition <- emx_TE_signdiff_condition[order(emx_TE_signdiff_condition$FoldChange, decreasing = T),]
+emx_TE_signdiff_condition$TE_subfamily <- factor(emx_TE_signdiff_condition$TE_subfamily, levels=unique(emx_TE_signdiff_condition[order(emx_TE_signdiff_condition$FoldChange, decreasing = T),'TE_subfamily']))
 
-emx_TE_signdiff_condition <- merge(emx_TE_signdiff_condition, emx_TE_res_df[,c('TE_subfamily', 'padj')], by='TE_subfamily')
-emx_TE_signdiff_condition$TE_subfamily <- factor(emx_TE_signdiff_condition$TE_subfamily, levels=unique(emx_TE_signdiff_condition[order(emx_TE_signdiff_condition$padj),'TE_subfamily']))
+p_signdiff_TE_emx <- ggplot(data=emx_TE_signdiff_condition, aes(x=TE_subfamily, y=FoldChange)) +   
+  geom_bar(aes(width=0.7), position = "dodge", stat="identity", fill = "tomato2") + theme_classic()+labs(y="FoldChange", x="TE subfamily", fill="Condition")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+ 
+  geom_hline(yintercept=1, linetype="dashed")
 
-p_signdiff_TE_emx <- ggplot(data=emx_TE_signdiff_condition, aes(x=TE_subfamily, y=log2Mean)) +   
-  geom_bar(aes(fill = Condition, width=0.7), position = "dodge", stat="identity") + theme_classic()+labs(y="log2(mean normalized read counts)", x="TE subfamily", fill="Condition")+
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))+ scale_fill_manual(values=c("steelblue", "tomato2"))
-
-ggsave(p_signdiff_TE_emx, file='6_TEtranscripts/invivo_bd/plots/signdiff_TE.svg', width=25, height=10, units="cm", dpi=96)
-
+ggsave(p_signdiff_TE_emx, file='6_TEtranscripts/invivo_bd/plots/signdiff_TE.svg', width=15, height=15, units="cm", dpi=96)
 
 # NPC ----
 npc <- fread('/Volumes/Seagate Backup /trim28/09.10.19/6_TEtranscripts/invitro_crispr/invitro_crispr.cntTable', data.table = F)
@@ -335,16 +352,27 @@ npc_genes_dds <- DESeq(npc_genes_dds)
 npc_genes_res <- results(npc_genes_dds)
 npc_genes_exp <- getAverage(npc_genes_dds)
 
-p_gene_meanplot_npc <- meanPlot_cus(npc_genes_exp$Mean, test=npc_genes_res, p=0.05, c1='ko', c2='ctrl',ttl='', repel = FALSE) + labs(title="", subtitle="")
-ggsave(p_gene_meanplot_npc, file="6_TEtranscripts/invitro_crispr/plots/gene_meanplot.svg", width=20, height=20, units="cm", dpi=96)
+npc_gene_protein <- merge(npc_gene, unique(transcript_gene[,-1]), by.x='row.names', by.y='gene_id')
+npc_gene_protein <- subset(npc_gene_protein, npc_gene_protein$gene_type == 'protein_coding')
+colnames(npc_gene_protein)[1] <- 'gene_id'
+npc_genes_vst_protein <- varianceStabilizingTransformation(npc_genes_dds[npc_gene_protein$gene_id, ])
+npc_gene_pca_protein <- plotPCA(npc_genes_vst_protein) + ylim(c(-30,20)) + theme_classic() + ggtitle("PCA - In vitro CRISPR gene expression")
+ggsave(npc_gene_pca_protein, file="6_TEtranscripts/invitro_crispr/plots/gene_protein_pca.svg", width=20, height=20, units="cm", dpi=96)
+
+p_gene_meanplot_npc <- meanPlot_cus(npc_genes_exp$Mean, test=npc_genes_res, l=0.5, p=0.05, c1='ko', c2='ctrl',ttl='', repel = FALSE) + labs(title="", subtitle="")
+ggsave(p_gene_meanplot_npc, file="6_TEtranscripts/invitro_crispr/plots/gene_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
 
 npc_TE_dds <- DESeqDataSetFromMatrix(npc_TE[,rownames(npc_coldata)], npc_coldata, design = ~ condition)
 npc_TE_dds <- DESeq(npc_TE_dds)
 npc_TE_res <- results(npc_TE_dds)
 npc_TE_exp <- getAverage(npc_TE_dds)
+npc_TE_vst <- varianceStabilizingTransformation(npc_TE_dds)
+npc_TE_pca <- plotPCA(npc_TE_vst) + theme_classic() + ggtitle("PCA - In vitro CRISPR TE expression")
+ggsave(npc_TE_pca, file="6_TEtranscripts/invitro_crispr/plots/TE_pca.svg", width=20, height=20, units="cm", dpi=96)
 
-p_TE_meanplot_npc <- meanPlot_cus(npc_TE_exp$Mean, test=npc_TE_res, col2 = 'black', col3 = 'firebrick', p=0.05, c1='ko', c2='ctrl',ttl='', repel = F)  + labs(title="", subtitle="")
-ggsave(p_TE_meanplot_npc, file="6_TEtranscripts/invitro_crispr/plots/TE_meanplot.svg", width=20, height=20, units="cm", dpi=96)
+
+p_TE_meanplot_npc <- meanPlot_cus(npc_TE_exp$Mean, test=npc_TE_res, col2 = 'black', col3 = 'firebrick', p=0.05, c1='ko', c2='ctrl',ttl='', repel = F, l=0.5)  + labs(title="", subtitle="")
+ggsave(p_TE_meanplot_npc, file="6_TEtranscripts/invitro_crispr/plots/TE_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
 
 npc_gene_norm <- counts(npc_genes_dds, normalized = TRUE)
 npc_gene_norm <- merge(npc_gene_norm, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
@@ -427,13 +455,17 @@ ggsave(p_signdiff_TE_npc_annotation, file='6_TEtranscripts/invitro_crispr/plots/
 
 npc_TE_res_df <-  as.data.frame(npc_TE_res)
 npc_TE_res_df$TE_subfamily <- unlist(lapply(str_split(rownames(npc_TE_res_df), ':'), `[[`, 1))
+npc_TE_signdiff_condition <- subset(npc_TE_signdiff_condition, npc_TE_signdiff_condition$Condition == 'ko')
+npc_TE_signdiff_condition <- merge(npc_TE_signdiff_condition, npc_TE_res_df[,c('TE_subfamily', 'padj', 'log2FoldChange')], by='TE_subfamily')
+npc_TE_signdiff_condition$FoldChange <- 2^(npc_TE_signdiff_condition$log2FoldChange)
+npc_TE_signdiff_condition <- npc_TE_signdiff_condition[order(npc_TE_signdiff_condition$FoldChange, decreasing = T),]
 
-npc_TE_signdiff_condition <- merge(npc_TE_signdiff_condition, npc_TE_res_df[,c('TE_subfamily', 'padj')], by='TE_subfamily')
-npc_TE_signdiff_condition$TE_subfamily <- factor(npc_TE_signdiff_condition$TE_subfamily, levels=unique(npc_TE_signdiff_condition[order(npc_TE_signdiff_condition$padj),'TE_subfamily']))
+npc_TE_signdiff_condition$TE_subfamily <- factor(npc_TE_signdiff_condition$TE_subfamily, levels=unique(npc_TE_signdiff_condition[order(npc_TE_signdiff_condition$FoldChange, decreasing = T),'TE_subfamily']))
 
-p_signdiff_TE_npc <- ggplot(data=npc_TE_signdiff_condition, aes(x=TE_subfamily, y=log2Mean)) +   
-  geom_bar(aes(fill = Condition, width=0.7), position = "dodge", stat="identity") + theme_classic()+labs(y="log2(mean normalized read counts)", x="TE subfamily", fill="Condition")+
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))+ scale_fill_manual(values=c("steelblue", "tomato2"))
+p_signdiff_TE_npc <- ggplot(data=npc_TE_signdiff_condition, aes(x=TE_subfamily, y=FoldChange)) +   
+  geom_bar(aes(width=0.7), position = "dodge", stat="identity", fill = "tomato2") + theme_classic()+labs(y="FoldChange", x="TE subfamily", fill="Condition")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+ 
+  geom_hline(yintercept=1, linetype="dashed")
 
 ggsave(p_signdiff_TE_npc, file='6_TEtranscripts/invitro_crispr/plots/signdiff_TE.svg', width=25, height=15, units="cm", dpi=96)
 
@@ -456,8 +488,8 @@ invivo_crispr_genes_dds <- DESeq(invivo_crispr_genes_dds)
 invivo_crispr_genes_res <- results(invivo_crispr_genes_dds)
 invivo_crispr_genes_exp <- getAverage(invivo_crispr_genes_dds)
 
-p_gene_meanplot_invivocrispr <- meanPlot_cus(invivo_crispr_genes_exp$Mean, test=invivo_crispr_genes_res, p=0.05, c1='ko', c2='ctrl',ttl='Gene DEA in invivo CRISPR KO experiment', repel = FALSE) + labs(title="", subtitle="")
-ggsave(p_gene_meanplot_invivocrispr, file="6_TEtranscripts/invivo_crispr/plots/gene_meanplot.svg", width=20, height=20, units="cm", dpi=96)
+p_gene_meanplot_invivocrispr <- meanPlot_cus(invivo_crispr_genes_exp$Mean, test=invivo_crispr_genes_res, l=0.5,p=0.05, c1='ko', c2='ctrl',ttl='Gene DEA in invivo CRISPR KO experiment', repel = FALSE) + labs(title="", subtitle="")
+ggsave(p_gene_meanplot_invivocrispr, file="6_TEtranscripts/invivo_crispr/plots/gene_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
 
 invivo_crispr_gene_norm <- counts(invivo_crispr_genes_dds, normalized = TRUE)
 invivo_crispr_gene_norm <- merge(invivo_crispr_gene_norm, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
@@ -509,8 +541,8 @@ invivo_crispr_TE_dds <- DESeq(invivo_crispr_TE_dds)
 invivo_crispr_TE_res <- results(invivo_crispr_TE_dds)
 invivo_crispr_TE_exp <- getAverage(invivo_crispr_TE_dds)
 
-p_TE_meanplot_invivocrispr <- meanPlot_cus(invivo_crispr_TE_exp$Mean, test=invivo_crispr_TE_res, p=0.05, c1='ko', col2='black', col3='firebrick', c2='ctrl',ttl='TE subfamilies at the CRISPR KO experiment', repel = FALSE) + labs(title="", subtitle="")
-ggsave(p_TE_meanplot_invivocrispr, file="6_TEtranscripts/invivo_crispr/plots/TE_meanplot.svg", width=20, height=20, units="cm", dpi=96)
+p_TE_meanplot_invivocrispr <- meanPlot_cus(invivo_crispr_TE_exp$Mean, test=invivo_crispr_TE_res, l=0.5, p=0.05, c1='ko', col2='black', col3='firebrick', c2='ctrl',ttl='TE subfamilies at the CRISPR KO experiment', repel = FALSE) + labs(title="", subtitle="")
+ggsave(p_TE_meanplot_invivocrispr, file="6_TEtranscripts/invivo_crispr/plots/TE_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
 
 
 # Adult invivo ----
@@ -531,8 +563,8 @@ invivo_adult_genes_dds <- DESeq(invivo_adult_genes_dds)
 invivo_adult_genes_res <- results(invivo_adult_genes_dds)
 invivo_adult_genes_exp <- getAverage(invivo_adult_genes_dds)
 
-p_gene_meanplot_invivoadult <- meanPlot_cus(invivo_adult_genes_exp$Mean, test=invivo_adult_genes_res, p=0.05, c1='ko', c2='ctrl',ttl='Gene DEA at floxed adult', repel = FALSE) + labs(title="", subtitle="")
-ggsave(p_gene_meanplot_invivocrispr, file="6_TEtranscripts/invivo_adult/plots/gene_meanplot.svg", width=20, height=20, units="cm", dpi=96)
+p_gene_meanplot_invivoadult <- meanPlot_cus(invivo_adult_genes_exp$Mean, test=invivo_adult_genes_res, l=0.5,p=0.05, c1='ko', c2='ctrl',ttl='Gene DEA at floxed adult', repel = FALSE) + labs(title="", subtitle="")
+ggsave(p_gene_meanplot_invivoadult, file="6_TEtranscripts/invivo_adult/plots/gene_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
 
 invivo_adult_gene_norm <- counts(invivo_adult_genes_dds, normalized = TRUE)
 invivo_adult_gene_norm <- merge(invivo_adult_gene_norm, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
@@ -583,11 +615,14 @@ invivo_adult_TEs_vst <- varianceStabilizingTransformation(invivo_adult_TEs_dds)
 invivo_adult_TE_prcomp <- make_pca(t(assay(invivo_adult_TEs_vst))[ , apply(t(assay(invivo_adult_TEs_vst)), 2, var) != 0],invivo_adult_coldata,c1='Control',c2='Ko', folder='multimapping/plots/invivo_adult/TE_', TRUE, '\nAdult Trim28 (TEs only)')
 invivo_adult_TEs_exp <- getAverage(invivo_adult_TEs_dds)
 
-p_TE_meanplot_invivoadult <- meanPlot_cus(invivo_adult_TEs_exp$Mean, test=invivo_adult_TEs_res, p=0.05, c1='ko', c2='ctrl', col2='black', col3='firebrick', ttl='', repel = FALSE) + labs(title="", subtitle="")
-ggsave(p_TE_meanplot_invivoadult, file="6_TEtranscripts/invivo_adult/plots/TE_meanplot.svg", width=20, height=20, units="cm", dpi=96)
+p_TE_meanplot_invivoadult <- meanPlot_cus(invivo_adult_TEs_exp$Mean, test=invivo_adult_TEs_res, p=0.05, l=0.5, c1='ko', c2='ctrl', col2='black', col3='firebrick', ttl='', repel = FALSE) + labs(title="", subtitle="")
+ggsave(p_TE_meanplot_invivoadult, file="6_TEtranscripts/invivo_adult/plots/TE_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
 
 # EMX GO analysis ----
 # Invivo bd without adult 
+View(merge(emx, unique(transcript_gene[,c(2,3)]), by.x="gene/TE",by.y='gene_id'))
+
+paste(emx_upreg[which(!emx_upreg$`Gene Name` %in% invivo_adult_upreg$`Gene Name`),c(8)], collapse = '|')
 write.xlsx(emx_upreg[which(!emx_upreg$`Gene Name` %in% invivo_adult_upreg$`Gene Name`),c(8,1,3,7)], 'GO_analysis/invivo_bd/upregulated/upregulated_genes_emx_not_invivo_adult.xlsx', col.names = T, row.names = F)
 write(unique(emx_upreg[which(!emx_upreg$`Gene Name` %in% invivo_adult_upreg$`Gene Name`),'Gene Name']), 'GO_analysis/invivo_bd/upregulated/sign_upreg_genes_not_in_adult.txt')
 
@@ -598,7 +633,7 @@ write.table(gencode[emx_upreg$`Gene ID`,], '6_TEtranscripts/invivo_bd/upregulate
 
 write(unique(emx_dwreg[which(!emx_dwreg$`Gene Name` %in% invivo_adult_dwnreg$`Gene Name`),'Gene Name']), 'GO_analysis/invivo_bd/downregulated/sign_downreg_genes_not_in_adult.txt')
 
-# Invivo bd viral defence 
+# Invivo bd viral defence ----
 viral_defence <- c("IFI16","IFI27","MS2","OAS1","IRF7","OASL","OAS2","OAS3","ISG20","MX1","IFIH1","IFIT3","IFI6","STAT1","IFIT2","ISG15","DDX58","DHX58","IFITM2","IFI35","B2M","IRF9","IFITM1","IFIT1","MX2")
 viral_defence <- tools::toTitleCase(tolower(viral_defence))
 viral_defence <- data.frame(gene_name=viral_defence)
@@ -634,7 +669,7 @@ p_viral_defence <- ggplot() +
   geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = -0.5, ymax = 0.5), fill = 'lightpink',  alpha = 0.3,size = 2)
 ggsave(p_viral_defence, file="6_TEtranscripts/invivo_bd/plots/viral_defence.svg", width=20, height=20, units="cm", dpi=96)
 
-# Invivo bd immune response
+# Invivo bd immune response ----
 immune_response <- fread('/Volumes/Seagate Backup /trim28/09.10.19/GO_analysis/invivo_bd/inmmune_response_GO0006954.tab', data.table = F)
 immune_response <- immune_response$V1
 immune_response <- tools::toTitleCase(tolower(immune_response))
@@ -689,6 +724,72 @@ p_immune_response_complete <- ggplot() +
 
 ggsave(p_immune_response_complete, file="6_TEtranscripts/invivo_bd/plots/immune_response_complete.svg", width=40, height=100, units="cm", dpi=96)
 ggsave(p_immune_response, file="6_TEtranscripts/invivo_bd/plots/immune_response.svg", width=30, height=20, units="cm", dpi=96)
+
+# Invivo microglia ----
+# Invivo bd microglia ----
+microglia <- c('Cd9', 'Cd11c',
+               'Clec7a', 'Cd63',
+               'Cst7', 'Csf1',
+               'B2m', 'Bcl2',
+               'Cd68', 'Hif1a',
+               'C1qa', 'Ank',
+               'Lgals3', 'Ly86',
+               'Lamp1', 'Ccl2',
+               'Ccl6', 'Rela',
+               'Tnf', 'Lc3',
+               'Myd88', 'Tlr1',
+               'Tlr2', 'Tlr4',
+               'Lamtor1', 'Mapk14',
+               'Ncf1', 'Rage',
+               'Sox1', 'Sox2',
+               'Jak1',
+               'Trim28')
+
+microglia <- data.frame(gene_name=microglia)
+microglia <- unique(merge(microglia, transcript_gene[,c(2,3)], by='gene_name'))
+
+invivo_bd_gene_norm_microglia <- invivo_bd_gene_norm[which(invivo_bd_gene_norm$gene_name %in% microglia$gene_name),c('gene_name', as.character(invivo_bd_coldata$samples))]
+rownames(invivo_bd_gene_norm_microglia) <- invivo_bd_gene_norm_microglia$gene_name
+invivo_bd_gene_norm_microglia_more10 <- invivo_bd_gene_norm_microglia[which(rowSums(invivo_bd_gene_norm_microglia[,invivo_bd_coldata$samples]) > 10),]
+invivo_bd_gene_norm_microglia_more10 <- merge(invivo_bd_gene_norm_microglia_more10, unique(transcript_gene[,c(2,3)]), by='gene_name')
+
+invivo_bd_genes_res_df <- as.data.frame(invivo_bd_genes_res)
+invivo_bd_genes_res_df$ci_low <- invivo_bd_genes_res_df$log2FoldChange - (qnorm(0.05)*invivo_bd_genes_res_df$lfcSE)
+# invivo_bd_genes_res_df$ci_low <- 2^(invivo_bd_genes_res_df$log2FoldChange - invivo_bd_genes_res_df$lfcSE) 
+invivo_bd_genes_res_df$ci_high <- invivo_bd_genes_res_df$log2FoldChange + (qnorm(0.05)*invivo_bd_genes_res_df$lfcSE)
+# invivo_bd_genes_res_df$ci_high <- 2^(invivo_bd_genes_res_df$log2FoldChange + invivo_bd_genes_res_df$lfcSE) 
+
+invivo_bd_microglia_fc <- invivo_bd_genes_res_df[microglia$gene_id,c('log2FoldChange', 'ci_low', 'ci_high'), drop=FALSE]
+invivo_bd_microglia_fc <- merge(invivo_bd_microglia_fc, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
+invivo_bd_microglia_fc$reg <- ifelse(invivo_bd_microglia_fc$log2FoldChange < 0, 'logFC < 0', 'logFC > 0')
+invivo_bd_microglia_fc$gene_name <- factor(invivo_bd_microglia_fc$gene_name, levels=invivo_bd_microglia_fc[order(invivo_bd_microglia_fc$log2FoldChange, decreasing=TRUE),'gene_name'])
+
+invivo_bd_microglia_fc <- invivo_bd_microglia_fc[which(invivo_bd_microglia_fc$Row.names %in% invivo_bd_gene_norm_microglia_more10$gene_id),]
+
+png('multimapping/plots/invivo_bd/inflammatory_genes_fc.png', width = 12, height = 7, units = 'in', res=200)
+ggplot() + 
+  geom_errorbar(data=invivo_bd_microglia_fc, mapping=aes(x=gene_name, ymin=ci_low, ymax=ci_high, colour=reg), width=0.2) + 
+  geom_point(stat='identity',data=invivo_bd_microglia_fc, mapping=aes(x=gene_name, y=log2FoldChange, colour=reg)) + coord_flip()+theme_bw() + scale_colour_manual(values=c("steelblue", 'tomato')) +
+  guides(fill=FALSE)+
+  labs(x="Gene name", y= 'log2 Fold Change', title='Change of expression on inflammatory genes at CreLoxP Trim28 KO\nError lines of 95% confidence intervals', colour="KO Relative expression")+
+  theme(
+    plot.title = element_text(size = 18),
+    axis.text.x = element_text(size = 15),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 13),
+    axis.text.y = element_text(size = 15),
+    axis.title.x = element_text(size = 15,margin = margin(t = 20, r = 0, b = 0, l = 0)),
+    axis.title.y = element_text(size = 15,margin = margin(t = 0, r = 20, b = 0, l = 0)))+
+  geom_hline(yintercept = 0, color = "black", size=0.5)
+dev.off()
+
+invivo_bd_gene_norm_microglia_more10 <- melt(invivo_bd_gene_norm_microglia_more10, by='gene_name')
+invivo_bd_gene_norm_microglia_more10$Condition <- ifelse(invivo_bd_coldata[as.character(invivo_bd_gene_norm_microglia_more10$variable),'condition'] == 'ko', 'Knock out', 'Control')
+
+invivo_bd_gene_norm_microglia_more10$gene_name <- factor(invivo_bd_gene_norm_microglia_more10$gene_name, levels=invivo_bd_microglia_fc[order(invivo_bd_microglia_fc$log2FoldChange, decreasing=TRUE),'gene_name'])
+invivo_bd_gene_norm_microglia_more10 <- subset(invivo_bd_gene_norm_microglia_more10, !is.na(invivo_bd_gene_norm_microglia_more10$gene_name))
+
+
 # GO Biological process ----
 GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/slim_biological_process_upreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/slim_biological_process_upreg_emx', morethan = 2,  botlog2fc = -0.5, toplog2fc = 0.5)
 GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/slim_biological_process_downreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/slim_biological_process_downreg_emx', morethan = 2,  botlog2fc = -0.5, toplog2fc = 0.5)
