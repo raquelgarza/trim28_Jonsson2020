@@ -133,9 +133,10 @@ GO_json <- function(file_name, prefix, botlog2fc=NULL, toplog2fc=NULL, morethan=
   
   
   
-  ggsave(plot, file=paste(prefix, '_fdr.svg', sep = ''), width=32, height=length(results_df_filtered$GO_label)/1.2, units="cm")
+  ggsave(plot, file=paste(prefix, '_fdr.svg', sep = ''), width=32, height=length(results_df_filtered$GO_label)*2, units="cm")
+  ggsave(plot, file=paste(prefix, '_fdr.png', sep = ''), width=32, height=length(results_df_filtered$GO_label)*2, units="cm")
   
-  return(results_df_filtered)
+  return(plot)
 }
 more_10 <- function(row){
   return(length(which(row > 10)))
@@ -226,12 +227,17 @@ emx_genes_dds <- DESeqDataSetFromMatrix(emx_gene[,rownames(emx_coldata)], emx_co
 emx_genes_dds <- DESeq(emx_genes_dds)
 emx_genes_res <- results(emx_genes_dds)
 emx_genes_exp <- getAverage(emx_genes_dds)
+emx_genes_vst <- varianceStabilizingTransformation(emx_genes_dds)
 emx_genes_res_df <- as.data.frame(emx_genes_res)
 emx_genes_res_df$ci_low <- emx_genes_res_df$log2FoldChange - (qnorm(0.05)*emx_genes_res_df$lfcSE)
 emx_genes_res_df$ci_high <- emx_genes_res_df$log2FoldChange + (qnorm(0.05)*emx_genes_res_df$lfcSE)
 
+p_gene_pca <- plotPCA(emx_genes_vst) + theme_classic() + ggtitle("PCA of gene expression")
+ggsave(p_gene_pca, file="6_TEtranscripts/invivo_bd/plots/gene_pca_emx.png", width=20, height=20, units="cm", dpi=320)
+ggsave(p_gene_pca, file="6_TEtranscripts/invivo_bd/plots/gene_pca_emx.svg", width=20, height=20, units="cm", dpi=320)
+
 p_gene_meanplot_emx <- meanPlot_cus(emx_genes_exp$Mean, test=emx_genes_res, l=0.5, p=0.05, c1='ko', c2='ctrl',ttl='Gene DEA in Cre Loxp experiment', repel = FALSE) + labs(title="", subtitle="")
-ggsave(p_gene_meanplot_emx, file="6_TEtranscripts/invivo_bd/plots/gene_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
+ggsave(p_gene_meanplot_emx, file="6_TEtranscripts/invivo_bd/plots/gene_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
 emx_gene_norm <- counts(emx_genes_dds, normalized = TRUE)
 emx_gene_norm <- merge(emx_gene_norm, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
@@ -271,9 +277,15 @@ emx_TE_dds <- DESeqDataSetFromMatrix(emx_TE[,rownames(emx_coldata)], emx_coldata
 emx_TE_dds <- DESeq(emx_TE_dds)
 emx_TE_res <- results(emx_TE_dds)
 emx_TE_exp <- getAverage(emx_TE_dds)
+emx_TE_vst <- varianceStabilizingTransformation(emx_TE_dds)
 
-p_TE_meanplot_emx <- meanPlot_cus(emx_TE_exp$Mean, test=emx_TE_res, l=0.5, p=0.05, c1='ko', c2='ctrl',ttl='TE DEA in Cre Loxp experiment', repel = FALSE, col3='firebrick', col2='black') + labs(title="", subtitle="")
-ggsave(p_TE_meanplot_emx, file="6_TEtranscripts/invivo_bd/plots/TE_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
+p_TE_meanplot_emx <- meanPlot_cus(emx_TE_exp$Mean, test=emx_TE_res, l=0.5, p=0.05, c1='ko', c2='ctrl',ttl='TE DEA in Cre Loxp experiment', repel = F, col3='firebrick', col2='black') + labs(title="", subtitle="")
+ggsave(p_TE_meanplot_emx, file="6_TEtranscripts/invivo_bd/plots/TE_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
+
+p_TE_pca <- plotPCA(emx_TE_vst) + theme_classic() + ggtitle("PCA of TE expression")
+ggsave(p_TE_pca, file="6_TEtranscripts/invivo_bd/plots/TE_pca_emx.png", width=20, height=20, units="cm", dpi=320)
+ggsave(p_TE_pca, file="6_TEtranscripts/invivo_bd/plots/TE_pca_emx.svg", width=20, height=20, units="cm", dpi=320)
+
 
 emx_TE_norm <- emx_TE
 emx_TE_norm[] <- mapply('/', emx_TE_norm, emx_genes_dds$sizeFactor)
@@ -330,6 +342,19 @@ p_signdiff_TE_emx <- ggplot(data=emx_TE_signdiff_condition, aes(x=TE_subfamily, 
 
 ggsave(p_signdiff_TE_emx, file='6_TEtranscripts/invivo_bd/plots/signdiff_TE.svg', width=15, height=15, units="cm", dpi=96)
 
+
+emx_iap_norm <- subset(emx_TE_norm, startsWith(emx_TE_norm$TE_subfamily, 'IAP'))
+emx_iap_norm <- emx_iap_norm[, emx_coldata$samples]
+
+emx_iap_norm_means <- merge(data.frame(ctrl_mean=rowMeans(emx_iap_norm[,subset(emx_coldata, emx_coldata$condition == 'ctrl')$samples])), data.frame(ko_mean=rowMeans(emx_iap_norm[,subset(emx_coldata, emx_coldata$condition == 'ko')$samples])), by='row.names')
+write.xlsx(emx_iap_norm_means, '/Volumes/Seagate Backup /trim28/09.10.19/6_TEtranscripts/invivo_bd/IAP_expression.xlsx', row.names = F)
+
+emx_iap_norm <- subset(emx_TE_norm, startsWith(emx_TE_norm$TE_subfamily, 'IAP'))
+emx_iap_norm <- emx_iap_norm[, c(emx_coldata$samples, "TE_subfamily")]
+emx_iap_norm <- merge(melt(emx_iap_norm), emx_coldata, by.x='variable', by.y='samples')
+p <- ggplot(emx_iap_norm, aes(y=value, x=condition, fill=condition)) + geom_boxplot() + theme_classic() 
+p + facet_wrap( ~ TE_subfamily, scales="free")
+
 # NPC ----
 npc <- fread('/Volumes/Seagate Backup /trim28/09.10.19/6_TEtranscripts/invitro_crispr/invitro_crispr.cntTable', data.table = F)
 colnames(npc)[-1] <- paste(unlist(lapply(strsplit(colnames(npc)[-1], '/'), `[[`, 5)), unlist(lapply(strsplit(colnames(npc)[-1], '/'), `[[`, 4)), unlist(lapply(strsplit(colnames(npc)[-1], '/'), `[[`, 6)), sep='_')
@@ -360,7 +385,7 @@ npc_gene_pca_protein <- plotPCA(npc_genes_vst_protein) + ylim(c(-30,20)) + theme
 ggsave(npc_gene_pca_protein, file="6_TEtranscripts/invitro_crispr/plots/gene_protein_pca.svg", width=20, height=20, units="cm", dpi=96)
 
 p_gene_meanplot_npc <- meanPlot_cus(npc_genes_exp$Mean, test=npc_genes_res, l=0.5, p=0.05, c1='ko', c2='ctrl',ttl='', repel = FALSE) + labs(title="", subtitle="")
-ggsave(p_gene_meanplot_npc, file="6_TEtranscripts/invitro_crispr/plots/gene_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
+ggsave(p_gene_meanplot_npc, file="6_TEtranscripts/invitro_crispr/plots/gene_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
 npc_TE_dds <- DESeqDataSetFromMatrix(npc_TE[,rownames(npc_coldata)], npc_coldata, design = ~ condition)
 npc_TE_dds <- DESeq(npc_TE_dds)
@@ -372,7 +397,7 @@ ggsave(npc_TE_pca, file="6_TEtranscripts/invitro_crispr/plots/TE_pca.svg", width
 
 
 p_TE_meanplot_npc <- meanPlot_cus(npc_TE_exp$Mean, test=npc_TE_res, col2 = 'black', col3 = 'firebrick', p=0.05, c1='ko', c2='ctrl',ttl='', repel = F, l=0.5)  + labs(title="", subtitle="")
-ggsave(p_TE_meanplot_npc, file="6_TEtranscripts/invitro_crispr/plots/TE_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
+ggsave(p_TE_meanplot_npc, file="6_TEtranscripts/invitro_crispr/plots/TE_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
 npc_gene_norm <- counts(npc_genes_dds, normalized = TRUE)
 npc_gene_norm <- merge(npc_gene_norm, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
@@ -489,7 +514,7 @@ invivo_crispr_genes_res <- results(invivo_crispr_genes_dds)
 invivo_crispr_genes_exp <- getAverage(invivo_crispr_genes_dds)
 
 p_gene_meanplot_invivocrispr <- meanPlot_cus(invivo_crispr_genes_exp$Mean, test=invivo_crispr_genes_res, l=0.5,p=0.05, c1='ko', c2='ctrl',ttl='Gene DEA in invivo CRISPR KO experiment', repel = FALSE) + labs(title="", subtitle="")
-ggsave(p_gene_meanplot_invivocrispr, file="6_TEtranscripts/invivo_crispr/plots/gene_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
+ggsave(p_gene_meanplot_invivocrispr, file="6_TEtranscripts/invivo_crispr/plots/gene_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
 invivo_crispr_gene_norm <- counts(invivo_crispr_genes_dds, normalized = TRUE)
 invivo_crispr_gene_norm <- merge(invivo_crispr_gene_norm, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
@@ -542,10 +567,26 @@ invivo_crispr_TE_res <- results(invivo_crispr_TE_dds)
 invivo_crispr_TE_exp <- getAverage(invivo_crispr_TE_dds)
 
 p_TE_meanplot_invivocrispr <- meanPlot_cus(invivo_crispr_TE_exp$Mean, test=invivo_crispr_TE_res, l=0.5, p=0.05, c1='ko', col2='black', col3='firebrick', c2='ctrl',ttl='TE subfamilies at the CRISPR KO experiment', repel = FALSE) + labs(title="", subtitle="")
-ggsave(p_TE_meanplot_invivocrispr, file="6_TEtranscripts/invivo_crispr/plots/TE_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
+ggsave(p_TE_meanplot_invivocrispr, file="6_TEtranscripts/invivo_crispr/plots/TE_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
+
+invivo_crispr_cas_coldata <- subset(invivo_crispr_coldata, startsWith(invivo_crispr_coldata$samples, 'cas') | invivo_crispr_coldata$condition == 'ctrl')
+invivo_crispr_cas_TE_dds <- DESeqDataSetFromMatrix(invivo_crispr_TE[,rownames(invivo_crispr_cas_coldata)], invivo_crispr_cas_coldata, design = ~ condition)
+invivo_crispr_cas_TE_dds <- DESeq(invivo_crispr_cas_TE_dds)
+invivo_crispr_cas_TE_res <- results(invivo_crispr_cas_TE_dds)
+invivo_crispr_cas_TE_exp <- getAverage(invivo_crispr_cas_TE_dds)
+
+p_TE_meanplot_invivocrispr_cas <- meanPlot_cus(invivo_crispr_cas_TE_exp$Mean, test=invivo_crispr_cas_TE_res, l=0.5,p=0.05, c1='ko', c2='ctrl',ttl='TE DEA in invivo CRISPR KO experiment - Cas', repel = FALSE, col2 = 'black') + labs(title="", subtitle="")
+
+invivo_crispr_flexcas_coldata <- subset(invivo_crispr_coldata, startsWith(invivo_crispr_coldata$samples, 'flexcas') | invivo_crispr_coldata$condition == 'ctrl')
+invivo_crispr_flexcas_TE_dds <- DESeqDataSetFromMatrix(invivo_crispr_TE[,rownames(invivo_crispr_flexcas_coldata)], invivo_crispr_flexcas_coldata, design = ~ condition)
+invivo_crispr_flexcas_TE_dds <- DESeq(invivo_crispr_flexcas_TE_dds)
+invivo_crispr_flexcas_TE_res <- results(invivo_crispr_flexcas_TE_dds)
+invivo_crispr_flexcas_TE_exp <- getAverage(invivo_crispr_flexcas_TE_dds)
+
+p_TE_meanplot_invivocrispr_flexcas <- meanPlot_cus(invivo_crispr_flexcas_TE_exp$Mean, test=invivo_crispr_flexcas_TE_res, l=0.5,p=0.05, c1='ko', c2='ctrl',ttl='TE DEA in invivo CRISPR KO experiment - flexcas', repel = F, col3 = 'firebrick3', col2 = 'black') + labs(title="", subtitle="")
 
 
-# Adult invivo ----
+# Adult invivo: FLOXED ----
 invivo_adult <- fread('6_TEtranscripts/invivo_adult/invivo_adult.cntTable', data.table = F)
 colnames(invivo_adult)[-1] <- paste(unlist(lapply(strsplit(colnames(invivo_adult)[-1], '/'), `[[`, 5)), unlist(lapply(strsplit(colnames(invivo_adult)[-1], '/'), `[[`, 4)), sep='_')
 colnames(invivo_adult)[-1] <- paste(unlist(lapply(strsplit(colnames(invivo_adult)[-1], '_'), `[[`, 1)), ifelse(unlist(lapply(strsplit(colnames(invivo_adult)[-1], '_'), `[[`, 2)) == 'ctrl', 'ko', 'ctrl'), sep='_')
@@ -564,7 +605,7 @@ invivo_adult_genes_res <- results(invivo_adult_genes_dds)
 invivo_adult_genes_exp <- getAverage(invivo_adult_genes_dds)
 
 p_gene_meanplot_invivoadult <- meanPlot_cus(invivo_adult_genes_exp$Mean, test=invivo_adult_genes_res, l=0.5,p=0.05, c1='ko', c2='ctrl',ttl='Gene DEA at floxed adult', repel = FALSE) + labs(title="", subtitle="")
-ggsave(p_gene_meanplot_invivoadult, file="6_TEtranscripts/invivo_adult/plots/gene_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
+ggsave(p_gene_meanplot_invivoadult, file="6_TEtranscripts/invivo_adult/plots/gene_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
 invivo_adult_gene_norm <- counts(invivo_adult_genes_dds, normalized = TRUE)
 invivo_adult_gene_norm <- merge(invivo_adult_gene_norm, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
@@ -616,12 +657,35 @@ invivo_adult_TE_prcomp <- make_pca(t(assay(invivo_adult_TEs_vst))[ , apply(t(ass
 invivo_adult_TEs_exp <- getAverage(invivo_adult_TEs_dds)
 
 p_TE_meanplot_invivoadult <- meanPlot_cus(invivo_adult_TEs_exp$Mean, test=invivo_adult_TEs_res, p=0.05, l=0.5, c1='ko', c2='ctrl', col2='black', col3='firebrick', ttl='', repel = FALSE) + labs(title="", subtitle="")
-ggsave(p_TE_meanplot_invivoadult, file="6_TEtranscripts/invivo_adult/plots/TE_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
+ggsave(p_TE_meanplot_invivoadult, file="6_TEtranscripts/invivo_adult/plots/TE_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
+
+# EMX overlap FLOXED --- 
+emx_upreg <- as.data.frame(as.matrix(subset(emx_genes_res, emx_genes_res$log2FoldChange > 0.5 & emx_genes_res$padj < 0.05)))
+emx_dwreg <- as.data.frame(as.matrix(subset(emx_genes_res, emx_genes_res$log2FoldChange < -0.5 & emx_genes_res$padj < 0.05)))
+
+invivo_adult_upreg <- as.data.frame(as.matrix(subset(invivo_adult_genes_res, invivo_adult_genes_res$log2FoldChange > 0.5 & invivo_adult_genes_res$padj < 0.05)))
+invivo_adult_dwnreg <- as.data.frame(as.matrix(subset(invivo_adult_genes_res, invivo_adult_genes_res$log2FoldChange < -0.5 & invivo_adult_genes_res$padj < 0.05)))
+
+upreg_intersect <- table(rownames(invivo_adult_upreg) %in% rownames(emx_upreg))["TRUE"]
+
+dwreg_intersect <- table(rownames(invivo_adult_dwnreg) %in% rownames(emx_dwreg))["TRUE"]
+
+library(VennDiagram)
+grid.newpage()
+emx_invivo_adult_upreg_venn <- draw.pairwise.venn(nrow(invivo_adult_upreg), nrow(emx_upreg), upreg_intersect, category = c("AAV-Cre", "Emx1-Cre"), 
+                   lty = rep("blank", 2), fill = c("light blue", "pink"), 
+                   alpha = rep(0.5, 2), cat.pos = c(0, 0), cat.dist = rep(0.025, 2))
+
+ggsave(emx_invivo_adult_upreg_venn, file="/Volumes/Seagate Backup /trim28/09.10.19/6_TEtranscripts/emx_invivo_adult_upreg_venn.svg", width=20, height=20, units="cm", dpi=320)
+
+grid.newpage()
+emx_invivo_adult_dwreg_venn <- draw.pairwise.venn(nrow(invivo_adult_dwnreg), nrow(emx_dwreg), dwreg_intersect, category = c("AAV-Cre", "Emx1-Cre"), 
+                   lty = rep("blank", 2), fill = c("light blue", "pink"), 
+                   alpha = rep(0.5, 2), cat.pos = c(0, 0), cat.dist = rep(0.025, 2))
+ggsave(emx_invivo_adult_dwreg_venn, file="/Volumes/Seagate Backup /trim28/09.10.19/6_TEtranscripts/emx_invivo_adult_dwreg_venn.svg", width=20, height=20, units="cm", dpi=320)
 
 # EMX GO analysis ----
 # Invivo bd without adult 
-View(merge(emx, unique(transcript_gene[,c(2,3)]), by.x="gene/TE",by.y='gene_id'))
-
 paste(emx_upreg[which(!emx_upreg$`Gene Name` %in% invivo_adult_upreg$`Gene Name`),c(8)], collapse = '|')
 write.xlsx(emx_upreg[which(!emx_upreg$`Gene Name` %in% invivo_adult_upreg$`Gene Name`),c(8,1,3,7)], 'GO_analysis/invivo_bd/upregulated/upregulated_genes_emx_not_invivo_adult.xlsx', col.names = T, row.names = F)
 write(unique(emx_upreg[which(!emx_upreg$`Gene Name` %in% invivo_adult_upreg$`Gene Name`),'Gene Name']), 'GO_analysis/invivo_bd/upregulated/sign_upreg_genes_not_in_adult.txt')
@@ -791,40 +855,160 @@ invivo_bd_gene_norm_microglia_more10 <- subset(invivo_bd_gene_norm_microglia_mor
 
 
 # GO Biological process ----
-GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/slim_biological_process_upreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/slim_biological_process_upreg_emx', morethan = 2,  botlog2fc = -0.5, toplog2fc = 0.5)
-GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/slim_biological_process_downreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/slim_biological_process_downreg_emx', morethan = 2,  botlog2fc = -0.5, toplog2fc = 0.5)
+GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/not_in_adult/slim_biological_process_upreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/slim_biological_process_upreg_emx', morethan = 4,  botlog2fc = -0.5, toplog2fc = 0.5)
+GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/slim_biological_process_downreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/slim_biological_process_downreg_emx', morethan = 4,  botlog2fc = -0.5, toplog2fc = 0.5)
 
 # GO Biological process without adult ----
-GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/not_in_adult/slim_biological_process_upreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/not_in_adult/slim_biological_process_upreg_emx_not_in_adult', morethan = 2, botlog2fc = -0.5, toplog2fc = 0.5)
-GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/not_in_adult/slim_biological_process_downreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/not_in_adult/slim_biological_process_downreg_emx_not_in_adult', morethan = 2, botlog2fc = -0.5, toplog2fc = 0.5)
+GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/not_in_adult/slim_biological_process_upreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/not_in_adult/slim_biological_process_upreg_emx_not_in_adult', morethan = 4, botlog2fc = -0.5, toplog2fc = 0.5)
+GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/not_in_adult/slim_biological_process_downreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/not_in_adult/slim_biological_process_downreg_emx_not_in_adult', morethan = 4, botlog2fc = -0.5, toplog2fc = 0.5)
 
 # GO Molecular function ----
-GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/slim_molecular_function_upreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/slim_molecular_function_upreg_emx', morethan = 2, botlog2fc = -0.5, toplog2fc = 0.5)
-View(GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/slim_molecular_function_downreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/slim_molecular_function_downreg_emx', morethan = 2, botlog2fc = -0.5, toplog2fc = 0.5))
+GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/slim_molecular_function_upreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/slim_molecular_function_upreg_emx', morethan = 4, botlog2fc = -0.5, toplog2fc = 0.5)
+View(GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/slim_molecular_function_downreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/slim_molecular_function_downreg_emx', morethan = 4, botlog2fc = -0.5, toplog2fc = 0.5))
 
 # GO Molecular function without adult ----
-GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/not_in_adult/slim_molecular_function_upreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/not_in_adult/slim_molecular_function_upreg_emx_not_in_adult', morethan = 2, toplog2fc = 0.5)
-GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/not_in_adult/slim_molecular_function_downreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/not_in_adult/slim_molecular_function_downreg_emx_not_in_adult', morethan = 2, botlog2fc = -0.5, toplog2fc = 0.5)
+GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/not_in_adult/slim_molecular_function_upreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/not_in_adult/slim_molecular_function_upreg_emx_not_in_adult', morethan = 4, toplog2fc = 0.5)
+GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/not_in_adult/slim_molecular_function_downreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/not_in_adult/slim_molecular_function_downreg_emx_not_in_adult', morethan = 4, botlog2fc = -0.5, toplog2fc = 0.5)
 
-# EMX ERVK upregulated ----
-ERVK_count <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/ERVK_count_matrix_2.csv', data.table = F)
-ERVK_coldata <- data.frame(sample=unlist(lapply(str_split(colnames(ERVK_count)[7:ncol(ERVK_count)], '/'), `[[`, 5)),
-                      condition=unlist(lapply(str_split(colnames(ERVK_count)[7:ncol(ERVK_count)], '/'), `[[`, 4)))
-colnames(ERVK_count)[7:ncol(ERVK_count)] <- unlist(lapply(str_split(colnames(ERVK_count)[7:ncol(ERVK_count)], '/'), `[[`, 5))
+# EMX MMERVK10C upregulated ----
+MMERVK10C_count <- fread('/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/2_readcount/fullMMERVK10C_count_matrix_2.csv', data.table = F)
+MMERVK10C_coldata <- data.frame(sample=paste(sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 5), sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 6), sep='_'),
+                           experiment=sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 3),
+                           condition=sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 4))
+MMERVK10C_coldata$sample <- as.character(MMERVK10C_coldata$sample)
+MMERVK10C_coldata$sample <- ifelse(MMERVK10C_coldata$experiment == 'invivo_crispr', 
+                              paste(sapply(str_split(MMERVK10C_coldata$sample, '_'),`[[`, 1), sapply(str_split(MMERVK10C_coldata$sample, '_'),`[[`, 2), sep='_'),
+                              ifelse(MMERVK10C_coldata$experiment != 'invitro_crispr', sapply(str_split(MMERVK10C_coldata$sample, '_'),`[[`, 1), MMERVK10C_coldata$sample))
 
-rownames(ERVK_coldata) <- ERVK_coldata$sample
-rownames(ERVK_count) <- ERVK_count$Geneid
+colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)] <- ifelse(sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 3) == 'invivo_crispr', 
+                                                   paste(sapply(str_split(paste(sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 5), sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 6), sep='_'), '_'),`[[`, 1), sapply(str_split(paste(sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 5), sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 6), sep='_'), '_'),`[[`, 2), sep='_'),
+                                                   ifelse(sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 3) != 'invitro_crispr', sapply(str_split(paste(sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 5), sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 6), sep='_'), '_'),`[[`, 1), paste(sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 5), sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 6), sep='_')))
 
-ERVK_dds <- DESeqDataSetFromMatrix(ERVK_count[,rownames(ERVK_coldata)], ERVK_coldata, design = ~ condition)
-ERVK_dds <- DESeq(ERVK_dds)
-ERVK_res <- results(ERVK_dds)
+rownames(MMERVK10C_coldata) <- MMERVK10C_coldata$sample
+rownames(MMERVK10C_count) <- MMERVK10C_count$Geneid
+MMERVK10C_count_npc <- MMERVK10C_count[,c('Chr', 'Start', 'End', 'Geneid', 'Strand', subset(MMERVK10C_coldata, MMERVK10C_coldata$experiment == 'invitro_crispr')$sample)]
+MMERVK10C_coldata_npc <- subset(MMERVK10C_coldata, MMERVK10C_coldata$experiment == 'invitro_crispr')
 
-ERVK_upreg <- rownames(ERVK_res[which(ERVK_res$log2FoldChange > 0),])
-ERVK_upreg <- ERVK_upreg[which(ERVK_upreg %in% rownames(ERVK_count))]
-write.table(ERVK_count[ERVK_upreg,c('Chr', 'Start', 'End', 'Geneid', 'Strand')], col.names = F, row.names = F, quote = F, sep='\t', file='10_nearbygenes/upregulated/emx_upreg_ERVK.bed')
+MMERVK10C_dds_npc <- DESeqDataSetFromMatrix(MMERVK10C_count_npc[,rownames(MMERVK10C_coldata_npc)], MMERVK10C_coldata_npc, design = ~ condition)
+MMERVK10C_dds_npc <- DESeq(MMERVK10C_dds_npc)
+MMERVK10C_res_npc <- results(MMERVK10C_dds_npc)
 
-ERVK_not_upreg <- rownames(ERVK_res[which(!ERVK_res$log2FoldChange > 0 | is.na(ERVK_res$log2FoldChange)),])
-ERVK_not_upreg <- ERVK_not_upreg[which(ERVK_not_upreg %in% rownames(ERVK_res))]
-write.table(ERVK_count[ERVK_not_upreg,c('Chr', 'Start', 'End', 'Geneid', 'Strand')], col.names = F, row.names = F, quote = F, sep='\t', file='10_nearbygenes/not_upregulated/emx_notupreg_ERVK.bed')
+MMERVK10C_upreg_npc <- rownames(MMERVK10C_res_npc[which(MMERVK10C_res_npc$log2FoldChange > 0),])
+MMERVK10C_upreg_npc <- MMERVK10C_upreg_npc[which(MMERVK10C_upreg_npc %in% rownames(MMERVK10C_count_npc))]
+write.table(MMERVK10C_count_npc[MMERVK10C_upreg_npc,c('Chr', 'Start', 'End', 'Geneid', 'Strand')], col.names = F, row.names = F, quote = F, sep='\t', file='/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/npc_upreg_MMERVK10C.bed')
+
+MMERVK10C_not_upreg_npc <- rownames(MMERVK10C_res_npc[which(!MMERVK10C_res_npc$log2FoldChange > 0 | is.na(MMERVK10C_res_npc$log2FoldChange)),])
+MMERVK10C_not_upreg_npc <- MMERVK10C_not_upreg_npc[which(MMERVK10C_not_upreg_npc %in% rownames(MMERVK10C_res_npc))]
+write.table(MMERVK10C_count_npc[MMERVK10C_not_upreg_npc,c('Chr', 'Start', 'End', 'Geneid', 'Strand')], col.names = F, row.names = F, quote = F, sep='\t', file='/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/npc_notupreg_MMERVK10C.bed')
+
+MMERVK10C_count_emx <- MMERVK10C_count[,c('Chr', 'Start', 'End', 'Geneid', 'Strand', subset(MMERVK10C_coldata, MMERVK10C_coldata$experiment == 'invivo_bd')$sample)]
+MMERVK10C_coldata_emx <- subset(MMERVK10C_coldata, MMERVK10C_coldata$experiment == 'invivo_bd')
+
+MMERVK10C_dds_emx <- DESeqDataSetFromMatrix(MMERVK10C_count_emx[,rownames(MMERVK10C_coldata_emx)], MMERVK10C_coldata_emx, design = ~ condition)
+MMERVK10C_dds_emx <- DESeq(MMERVK10C_dds_emx)
+MMERVK10C_res_emx <- results(MMERVK10C_dds_emx)
+
+MMERVK10C_upreg_emx <- rownames(MMERVK10C_res_emx[which(MMERVK10C_res_emx$log2FoldChange > 0),])
+MMERVK10C_upreg_emx <- MMERVK10C_upreg_emx[which(MMERVK10C_upreg_emx %in% rownames(MMERVK10C_count_emx))]
+write.table(MMERVK10C_count_emx[MMERVK10C_upreg_emx,c('Chr', 'Start', 'End', 'Geneid', 'Strand')], col.names = F, row.names = F, quote = F, sep='\t', file='/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/emx_upreg_MMERVK10C.bed')
+
+MMERVK10C_not_upreg_emx <- rownames(MMERVK10C_res_emx[which(!MMERVK10C_res_emx$log2FoldChange > 0 | is.na(MMERVK10C_res_emx$log2FoldChange)),])
+MMERVK10C_not_upreg_emx <- MMERVK10C_not_upreg_emx[which(MMERVK10C_not_upreg_emx %in% rownames(MMERVK10C_res_emx))]
+write.table(MMERVK10C_count_emx[MMERVK10C_not_upreg_emx,c('Chr', 'Start', 'End', 'Geneid', 'Strand')], col.names = F, row.names = F, quote = F, sep='\t', file='/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/emx_notupreg_MMERVK10C.bed')
+
+
+# EMX - MMERVK10C nearby gene expression ----
+emx_upreg10kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/invivo_bd/emx_upreg_MMERVK10C_10kb_windows_intersect_genes.bed', data.table = F, header = F)
+emx_upreg25kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/invivo_bd/emx_upreg_MMERVK10C_25kb_windows_intersect_genes.bed', data.table = F, header = F)
+emx_upreg50kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/invivo_bd/emx_upreg_MMERVK10C_50kb_windows_intersect_genes.bed', data.table = F, header = F)
+
+emx_upreg10kb_res <- subset(emx_genes_res, rownames(emx_genes_res) %in% as.character(emx_upreg10kb$V4))
+emx_upreg25kb_res <- subset(emx_genes_res, rownames(emx_genes_res) %in% as.character(emx_upreg25kb$V4))
+emx_upreg50kb_res <- subset(emx_genes_res, rownames(emx_genes_res) %in% as.character(emx_upreg50kb$V4))
+
+emx_nearby_genes_upregMMERVK10C <- data.frame(log2FC=emx_upreg10kb_res[,'log2FoldChange', drop=F], set=rep('10kb', nrow(emx_upreg10kb_res)))
+emx_nearby_genes_upregMMERVK10C <- rbind(emx_nearby_genes_upregMMERVK10C, data.frame(log2FC=emx_upreg25kb_res[,'log2FoldChange', drop=F], set=rep('25kb', nrow(emx_upreg25kb_res))))
+emx_nearby_genes_upregMMERVK10C <- rbind(emx_nearby_genes_upregMMERVK10C, data.frame(log2FC=emx_upreg50kb_res[,'log2FoldChange', drop=F], set=rep('50kb', nrow(emx_upreg50kb_res))))
+emx_nearby_genes_upregMMERVK10C$disregulation <- rep("Upregulated", nrow(emx_nearby_genes_upregMMERVK10C))
+
+# Not upregulated MMERVKs
+emx_notupreg10kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/invivo_bd/emx_notupreg_MMERVK10C_10kb_windows_intersect_genes.bed', data.table = F, header = F)
+emx_notupreg25kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/invivo_bd/emx_notupreg_MMERVK10C_25kb_windows_intersect_genes.bed', data.table = F, header = F)
+emx_notupreg50kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/invivo_bd/emx_notupreg_MMERVK10C_50kb_windows_intersect_genes.bed', data.table = F, header = F)
+
+emx_notupreg10kb_res <- subset(emx_genes_res, rownames(emx_genes_res) %in% as.character(emx_notupreg10kb$V4))
+emx_notupreg25kb_res <- subset(emx_genes_res, rownames(emx_genes_res) %in% as.character(emx_notupreg25kb$V4))
+emx_notupreg50kb_res <- subset(emx_genes_res, rownames(emx_genes_res) %in% as.character(emx_notupreg50kb$V4))
+
+emx_nearby_genes_notupregMMERVK10C <- data.frame(log2FC=emx_notupreg10kb_res[,'log2FoldChange', drop=F], set=rep('10kb', nrow(emx_notupreg10kb_res)))
+emx_nearby_genes_notupregMMERVK10C <- rbind(emx_nearby_genes_notupregMMERVK10C, data.frame(log2FC=emx_notupreg25kb_res[,'log2FoldChange', drop=F], set=rep('25kb', nrow(emx_notupreg25kb_res))))
+emx_nearby_genes_notupregMMERVK10C <- rbind(emx_nearby_genes_notupregMMERVK10C, data.frame(log2FC=emx_notupreg50kb_res[,'log2FoldChange', drop=F], set=rep('50kb', nrow(emx_notupreg50kb_res))))
+emx_nearby_genes_notupregMMERVK10C$disregulation <- rep("Not Upregulated", nrow(emx_nearby_genes_notupregMMERVK10C))
+
+emx_nearby_genes_MMERVK10C <- rbind(emx_nearby_genes_upregMMERVK10C, emx_nearby_genes_notupregMMERVK10C)
+
+library(ggpubr)
+
+emx_nearby_genes_MMERVK10C_plot <- ggplot(emx_nearby_genes_MMERVK10C, aes(y=log2FoldChange, x=set, fill=disregulation)) + 
+  geom_boxplot() + theme_classic() + scale_fill_brewer(palette="Set2") + 
+  labs(fill = "Distance to\nfull MMERVK10C", x="") + ggtitle("Emx - Genes nearby upregulated MMERVK10Cs")+ 
+  ylim(c(-3,6)) + stat_compare_means(method ='t.test')
+
+ggsave(emx_nearby_genes_MMERVK10C_plot, file='/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/invivo_bd/emx_nearby_gene_MMERVK10C.svg', width=20, height=20, units="cm", dpi=96)
+
+# NPC - MMERVK10C nearby gene expression ----
+npc_upreg10kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/invitro_crispr/npc_upreg_MMERVK10C_10kb_windows_intersect_genes.bed', data.table = F, header = F)
+npc_upreg25kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/invitro_crispr/npc_upreg_MMERVK10C_25kb_windows_intersect_genes.bed', data.table = F, header = F)
+npc_upreg50kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/invitro_crispr/npc_upreg_MMERVK10C_50kb_windows_intersect_genes.bed', data.table = F, header = F)
+
+npc_upreg10kb_res <- subset(npc_genes_res, rownames(npc_genes_res) %in% as.character(npc_upreg10kb$V4))
+npc_upreg25kb_res <- subset(npc_genes_res, rownames(npc_genes_res) %in% as.character(npc_upreg25kb$V4))
+npc_upreg50kb_res <- subset(npc_genes_res, rownames(npc_genes_res) %in% as.character(npc_upreg50kb$V4))
+
+plotMA(npc_upreg10kb_res, cex=1.5, ylim=c(-4,4))
+plotMA(npc_upreg25kb_res, cex=1.5, ylim=c(-4,4))
+plotMA(npc_upreg50kb_res, cex=1.5, ylim=c(-4,4))
+
+npc_nearby_genes_upregMMERVK10C <- data.frame(log2FC=npc_upreg10kb_res[,'log2FoldChange', drop=F], set=rep('10kb', nrow(npc_upreg10kb_res)))
+npc_nearby_genes_upregMMERVK10C <- rbind(npc_nearby_genes_upregMMERVK10C, data.frame(log2FC=npc_upreg25kb_res[,'log2FoldChange', drop=F], set=rep('25kb', nrow(npc_upreg25kb_res))))
+npc_nearby_genes_upregMMERVK10C <- rbind(npc_nearby_genes_upregMMERVK10C, data.frame(log2FC=npc_upreg50kb_res[,'log2FoldChange', drop=F], set=rep('50kb', nrow(npc_upreg50kb_res))))
+npc_nearby_genes_upregMMERVK10C$disregulation <- rep("Upregulated", nrow(npc_nearby_genes_upregMMERVK10C))
+
+# Not upregulated MMERVKs
+npc_notupreg10kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/invitro_crispr/npc_notupreg_MMERVK10C_10kb_windows_intersect_genes.bed', data.table = F, header = F)
+npc_notupreg25kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/invitro_crispr/npc_notupreg_MMERVK10C_25kb_windows_intersect_genes.bed', data.table = F, header = F)
+npc_notupreg50kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/invitro_crispr/npc_notupreg_MMERVK10C_50kb_windows_intersect_genes.bed', data.table = F, header = F)
+
+table(npc_genes_res$padj < 0.05 & npc_genes_res$log2FoldChange > 0.1)
+table(npc_genes_res$padj < 0.05 & npc_genes_res$log2FoldChange < -0.1)
+
+table(emx_genes_res$padj < 0.05 & emx_genes_res$log2FoldChange > 0.1)
+table(emx_genes_res$padj < 0.05 & emx_genes_res$log2FoldChange < -0.1)
+
+
+npc_notupreg10kb_res <- subset(npc_genes_res, rownames(npc_genes_res) %in% as.character(npc_notupreg10kb$V4))
+npc_notupreg25kb_res <- subset(npc_genes_res, rownames(npc_genes_res) %in% as.character(npc_notupreg25kb$V4))
+npc_notupreg50kb_res <- subset(npc_genes_res, rownames(npc_genes_res) %in% as.character(npc_notupreg50kb$V4))
+
+plotMA(npc_notupreg10kb_res, cex=1.5, ylim=c(-4,4))
+plotMA(npc_notupreg25kb_res, cex=1.5, ylim=c(-4,4))
+plotMA(npc_notupreg50kb_res, cex=1.5, ylim=c(-4,4))
+
+npc_nearby_genes_notupregMMERVK10C <- data.frame(log2FC=npc_notupreg10kb_res[,'log2FoldChange', drop=F], set=rep('10kb', nrow(npc_notupreg10kb_res)))
+npc_nearby_genes_notupregMMERVK10C <- rbind(npc_nearby_genes_notupregMMERVK10C, data.frame(log2FC=npc_notupreg25kb_res[,'log2FoldChange', drop=F], set=rep('25kb', nrow(npc_notupreg25kb_res))))
+npc_nearby_genes_notupregMMERVK10C <- rbind(npc_nearby_genes_notupregMMERVK10C, data.frame(log2FC=npc_notupreg50kb_res[,'log2FoldChange', drop=F], set=rep('50kb', nrow(npc_notupreg50kb_res))))
+npc_nearby_genes_notupregMMERVK10C$disregulation <- rep("Not Upregulated", nrow(npc_nearby_genes_notupregMMERVK10C))
+
+npc_nearby_genes_MMERVK10C <- rbind(npc_nearby_genes_upregMMERVK10C, npc_nearby_genes_notupregMMERVK10C)
+
+npc_nearby_genes_MMERVK10C_plot <- ggplot(npc_nearby_genes_MMERVK10C, aes(y=log2FoldChange, x=set, fill=disregulation)) + 
+  geom_boxplot() + theme_classic() + scale_fill_brewer(palette="Set2") + 
+  labs(fill = "Distance to\nfull MMERVK10C", x="") + ggtitle("NPC - Genes nearby upregulated MMERVK10Cs")+ 
+  ylim(c(-3,6)) + stat_compare_means(method ='t.test')
+
+ggsave(npc_nearby_genes_MMERVK10C_plot, file='/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/invitro_crispr/npc_nearby_gene_MMERVK10C.svg', width=20, height=20, units="cm", dpi=96)
+
+
+
 
 
