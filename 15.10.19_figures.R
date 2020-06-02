@@ -236,6 +236,10 @@ p_gene_pca <- plotPCA(emx_genes_vst) + theme_classic() + ggtitle("PCA of gene ex
 ggsave(p_gene_pca, file="6_TEtranscripts/invivo_bd/plots/gene_pca_emx.png", width=20, height=20, units="cm", dpi=320)
 ggsave(p_gene_pca, file="6_TEtranscripts/invivo_bd/plots/gene_pca_emx.svg", width=20, height=20, units="cm", dpi=320)
 
+EnhancedVolcano(emx_genes_res,
+                lab = rownames(emx_genes_res),
+                x = 'log2FoldChange',
+                y = 'pvalue', xlim=c(-6,10), ylim=c(0,170))
 p_gene_meanplot_emx <- meanPlot_cus(emx_genes_exp$Mean, test=emx_genes_res, l=0.5, p=0.05, c1='ko', c2='ctrl',ttl='Gene DEA in Cre Loxp experiment', repel = FALSE) + labs(title="", subtitle="")
 ggsave(p_gene_meanplot_emx, file="6_TEtranscripts/invivo_bd/plots/gene_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
@@ -709,7 +713,7 @@ rownames(emx_gene_norm_viral_defence) <- emx_gene_norm_viral_defence$gene_name
 emx_gene_norm_viral_defence_more10 <- emx_gene_norm_viral_defence[which(rowSums(emx_gene_norm_viral_defence[,emx_coldata$samples]) > 10),]
 emx_gene_norm_viral_defence_more10 <- merge(emx_gene_norm_viral_defence_more10, unique(transcript_gene[,c(2,3)]), by='gene_name')
 
-emx_viral_defence_fc <- emx_genes_res_df[viral_defence$gene_id,c('log2FoldChange', 'ci_low', 'ci_high'), drop=FALSE]
+emx_viral_defence_fc <- emx_genes_res_df[viral_defence$gene_id,c('log2FoldChange', 'ci_low', 'ci_high', 'padj'), drop=FALSE]
 emx_viral_defence_fc <- merge(emx_viral_defence_fc, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
 emx_viral_defence_fc$reg <- ifelse(emx_viral_defence_fc$log2FoldChange < 0, 'logFC < 0', 'logFC > 0')
 emx_viral_defence_fc$gene_name <- factor(emx_viral_defence_fc$gene_name, levels=emx_viral_defence_fc[order(emx_viral_defence_fc$log2FoldChange, decreasing=TRUE),'gene_name'])
@@ -746,7 +750,7 @@ rownames(emx_gene_norm_immune_response) <- emx_gene_norm_immune_response$gene_na
 emx_gene_norm_immune_response_more10 <- emx_gene_norm_immune_response[which(rowSums(emx_gene_norm_immune_response[,emx_coldata$samples]) > 10),]
 emx_gene_norm_immune_response_more10 <- merge(emx_gene_norm_immune_response_more10, unique(transcript_gene[,c(2,3)]), by='gene_name')
 
-emx_immune_response_fc <- emx_genes_res_df[immune_response$gene_id,c('log2FoldChange', 'ci_low', 'ci_high'), drop=FALSE]
+emx_immune_response_fc <- emx_genes_res_df[immune_response$gene_id,c('log2FoldChange', 'ci_low', 'ci_high', 'padj'), drop=FALSE]
 emx_immune_response_fc <- merge(emx_immune_response_fc, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
 emx_immune_response_fc$reg <- ifelse(emx_immune_response_fc$log2FoldChange < 0, 'logFC < 0', 'logFC > 0')
 emx_immune_response_fc$gene_name <- factor(emx_immune_response_fc$gene_name, levels=emx_immune_response_fc[order(emx_immune_response_fc$log2FoldChange, decreasing=TRUE),'gene_name'])
