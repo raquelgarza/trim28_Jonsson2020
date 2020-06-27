@@ -4,28 +4,48 @@ library('data.table')
 library('stringr')
 library("RColorBrewer")
 library("xlsx")
-library("deseqAbstraction")
 library('pheatmap')
 library('ggplot2')
 library('DESeq2')
 library('rjson')
 library('Hmisc')
 # Functions ----
+## getSignName ##
+# Get significantly different gene names. 
+# Taken from source code of the package deseqAbstraction which is no longer available on github.
+# Credits to Per L. Brattås
+# Parameters:
+# x = results object from deseq
+# p = padj threshold for significance
+# l = log2FC threshold for significance
 getSignName <- function(x,p,l=0) {
-  
   up <- x[!is.na(x$padj) & x$padj < p & x$log2FoldChange > l,]
   down <- x[!is.na(x$padj) & x$padj < p & x$log2FoldChange < -l,]
   return(list(up=rownames(up),down=rownames(down)))
-  
 }
+## getAverage ##
+# Get average expression (normalized by median of ratios) of each of the conditions in a deseq object.
+# Taken from source code of the package deseqAbstraction which is no longer available on github.
+# Credits to Per L. Brattås
+# Parameters:
+# dds = deseq object
 getAverage <- function(dds) {
-  
   baseMeanPerLvl <- sapply( levels(dds$condition), function(lvl) rowMeans( counts(dds,normalized=TRUE)[,dds$condition == lvl] ) )
   baseSDPerLvl <- sapply( levels(dds$condition), function(lvl) apply( counts(dds,normalized=TRUE)[,dds$condition == lvl],1,sd ) )
   colnames(baseSDPerLvl) <- paste("st.dev:",colnames(baseSDPerLvl),sep="")
   return(list(Mean=baseMeanPerLvl,SD=baseSDPerLvl))
-  
 }
+## GO_json ##
+# Parses json files from Panther DB into a relatively well sized plots
+# It outputs a barplot of log2FC of each of the selected GO terms (those that passes the criteria
+# specified by the parameters) combined with a dot plot showing FDRs.
+# Parameters:
+# file_name = path to the json file
+# prefix = output path or prefix of the resulting plots in pdf
+# botlog2FC = filter GO terms which have more than this log2FC
+# toplog2FC = filter GO terms which have less than this log2FC
+# morethan = filter GO terms which have less than this number of genes supporting it
+# ttl = title of the plot
 GO_json <- function(file_name, prefix, botlog2fc=NULL, toplog2fc=NULL, morethan=NULL, ttl=''){
   json <- fromJSON(file=file_name)
   json$overrepresentation$group[[1]]$result[[1]]$input_list$number_in_list
@@ -138,9 +158,17 @@ GO_json <- function(file_name, prefix, botlog2fc=NULL, toplog2fc=NULL, morethan=
   
   return(plot)
 }
+## more_10 ##
+# How many items in this row (vector) have a value greater than 10?
 more_10 <- function(row){
   return(length(which(row > 10)))
 }
+## meanPlot_cus ##
+# Create a mean plot. The function is mostly taken from the package deseqAbstraction which is no longer
+# available on gitHub.
+# Credits to Per L. Brattås
+# The plot is generated with ggplot instead of basic R to add the posibility of having highlights or 
+# labels.
 meanPlot_cus <- function(exp,test,c1 = "condition 1",c2 = "condition 2",p=.05,l=0,id=F, ttl="", 
                          repel=TRUE, col1="firebrick3", col2="steelblue4", col3="black", highlights=NA){
   sign <- getSignName(x = test,p = p,l = l)
@@ -197,52 +225,63 @@ meanPlot_cus <- function(exp,test,c1 = "condition 1",c2 = "condition 2",p=.05,l=
   return(plt)
   
 }
-# General ----
+# Annotations ----
+
+# Read a parsed file from the original GTF file given by TEtranscripts authors to have the TE classification in hand
+# The tabulated file includes TE id (e.g. "MMERVK10C-int_dup104"), TE subfamily (e.g. "MMERVK10C-int")
+# TE family (e.g. "ERVK") and TE class (e.g. "LTR")
 TE_classification <- fread('/Volumes/Seagate Backup /annotation/mouse/repeatmasker/mm10_rmsk_TE_classification.tab', data.table = FALSE, header=FALSE, fill=TRUE)
 colnames(TE_classification) <- c('TE_id', 'TE_subfamily', 'TE_family', 'TE_class')
+
+# Parsed tabulated file of gencode annotation vM20 including transcript ids, gene ids, gene name and biotype of the gene
 transcript_gene <- fread('/Volumes/Seagate Backup /annotation/mouse/gencode/gencode.vM20.annotation.transc.gene.tab', data.table = FALSE, header=FALSE)
 colnames(transcript_gene) <- c('transcript_id', 'gene_id', 'gene_name', 'gene_type')
+
 # EMX animals ----
-emx <- fread('../../msc/trim28/6_TEtranscripts/invivo_bd/invivo_bd.cntTable', data.table = F)
+# Read output from TEtranscripts
 emx <- fread('6_TEtranscripts/invivo_bd/invivo_bd.cntTable', data.table = F)
 colnames(emx)[-1] <- paste(unlist(lapply(strsplit(colnames(emx)[-1], '/'), `[[`, 5)), unlist(lapply(strsplit(colnames(emx)[-1], '/'), `[[`, 4)), sep='_')
-# Gene count
+# Gene counts
 emx_gene <- subset(emx, startsWith(emx$`gene/TE`, 'ENSMUS'))
 colnames(emx_gene)[1] <- 'gene_id'
 rownames(emx_gene) <- emx_gene$gene_id
 emx_gene <- emx_gene[,-1]
-# TE count
+# TE counts (where TE_id, in difference to TEclassification, is TE subfamily:TE family:TE class)
 emx_TE <- subset(emx, !startsWith(emx$`gene/TE`, 'ENSMUS'))
 colnames(emx_TE)[1] <- 'TE_id'
 rownames(emx_TE) <- emx_TE$TE_id
 emx_TE <- emx_TE[,-1]
 
+# For this experiment we focus on cortical samples
 emx_ctx <- colnames(emx_gene)[grepl('ctx', colnames(emx_gene))]
+
+# Create the metadata 
 emx_coldata <- data.frame(samples=emx_ctx, condition=unlist(lapply(strsplit(emx_ctx, '_'), `[[`, 2)))
 rownames(emx_coldata) <- emx_coldata$samples
 emx_coldata$samples <- as.character(emx_coldata$samples)
 
-# Gene DEA
+# Gene differential expression analysis testing for condition (Trim28 KO vs control)
 emx_genes_dds <- DESeqDataSetFromMatrix(emx_gene[,rownames(emx_coldata)], emx_coldata, design = ~ condition)
 emx_genes_dds <- DESeq(emx_genes_dds)
 emx_genes_res <- results(emx_genes_dds)
+# Calculate average expression on normalized reads on genes
 emx_genes_exp <- getAverage(emx_genes_dds)
 emx_genes_vst <- varianceStabilizingTransformation(emx_genes_dds)
+# Calculate log2FC confidence intervals
 emx_genes_res_df <- as.data.frame(emx_genes_res)
 emx_genes_res_df$ci_low <- emx_genes_res_df$log2FoldChange - (qnorm(0.05)*emx_genes_res_df$lfcSE)
 emx_genes_res_df$ci_high <- emx_genes_res_df$log2FoldChange + (qnorm(0.05)*emx_genes_res_df$lfcSE)
 
+# Plot PCA based on gene expression (variance stabilized) 
 p_gene_pca <- plotPCA(emx_genes_vst) + theme_classic() + ggtitle("PCA of gene expression")
 ggsave(p_gene_pca, file="6_TEtranscripts/invivo_bd/plots/gene_pca_emx.png", width=20, height=20, units="cm", dpi=320)
 ggsave(p_gene_pca, file="6_TEtranscripts/invivo_bd/plots/gene_pca_emx.svg", width=20, height=20, units="cm", dpi=320)
 
-EnhancedVolcano(emx_genes_res,
-                lab = rownames(emx_genes_res),
-                x = 'log2FoldChange',
-                y = 'pvalue', xlim=c(-6,10), ylim=c(0,170))
+# Gene mean plot
 p_gene_meanplot_emx <- meanPlot_cus(emx_genes_exp$Mean, test=emx_genes_res, l=0.5, p=0.05, c1='ko', c2='ctrl',ttl='Gene DEA in Cre Loxp experiment', repel = FALSE) + labs(title="", subtitle="")
 ggsave(p_gene_meanplot_emx, file="6_TEtranscripts/invivo_bd/plots/gene_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
+# Boxplot showing expression of Trim28 (normalized expression)
 emx_gene_norm <- counts(emx_genes_dds, normalized = TRUE)
 emx_gene_norm <- merge(emx_gene_norm, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
 emx_gene_norm_trim28 <- as.data.frame(t(emx_gene_norm[which(emx_gene_norm$gene_name == 'Trim28'),as.character(emx_coldata$samples)]))
@@ -260,6 +299,7 @@ p_trim28_emx <- ggplot(emx_gene_norm_trim28, aes(x=Condition, y=value, fill=Cond
 
 ggsave(p_trim28_emx, file='6_TEtranscripts/invivo_bd/plots/trim28.svg', width=20, height=20, units="cm", dpi=96)
 
+# Subset of upregulated genes to check for GO term enrichment
 emx_upreg <- as.data.frame(as.matrix(subset(emx_genes_res, emx_genes_res$log2FoldChange > 0 & emx_genes_res$padj < 0.05)))
 emx_upreg <- merge(emx_upreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
 colnames(emx_upreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'P-adj', 'Gene Name')
@@ -267,32 +307,37 @@ colnames(emx_upreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat
 write.xlsx(emx_upreg[,c(8,1,3,7)], '6_TEtranscripts/invivo_bd/upregulated_genes.xlsx', row.names = FALSE, col.names=TRUE)
 write.table(unique(emx_upreg$`Gene Name`), 'GO_analysis/invivo_bd/upregulated/sign_upreg_genes.txt', row.names = FALSE, col.names=FALSE, quote = F)
 
+# Subset of downregulated genes to check for GO term enrichment
 emx_dwreg <- as.data.frame(as.matrix(subset(emx_genes_res, emx_genes_res$log2FoldChange < 0 & emx_genes_res$padj < 0.05)))
 emx_dwreg <- merge(emx_dwreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
 colnames(emx_dwreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'P-adj', 'Gene Name')
 
 write.table(unique(emx_dwreg$`Gene Name`), 'GO_analysis/invivo_bd/downregulated/sign_downreg_genes.txt', row.names = FALSE, col.names=FALSE, quote=F)
 
+# Subset of expressed genes to use as background on GO term enrichment tests
 emx_gene_expressed <- emx_gene[which(apply(emx_gene, 1, more_10) > 0),]
 write(rownames(emx_gene_expressed), 'GO_analysis/invivo_bd/background_emx.txt')
 
-# TE DEA
+# TE differential expression analysis testing for differences between conditions (Trim28 KO vs control)
 emx_TE_dds <- DESeqDataSetFromMatrix(emx_TE[,rownames(emx_coldata)], emx_coldata, design = ~ condition)
 emx_TE_dds <- DESeq(emx_TE_dds)
 emx_TE_res <- results(emx_TE_dds)
 emx_TE_exp <- getAverage(emx_TE_dds)
 emx_TE_vst <- varianceStabilizingTransformation(emx_TE_dds)
 
+# TE mean plot
 p_TE_meanplot_emx <- meanPlot_cus(emx_TE_exp$Mean, test=emx_TE_res, l=0.5, p=0.05, c1='ko', c2='ctrl',ttl='TE DEA in Cre Loxp experiment', repel = F, col3='firebrick', col2='black') + labs(title="", subtitle="")
 ggsave(p_TE_meanplot_emx, file="6_TEtranscripts/invivo_bd/plots/TE_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
+# PCA plot based on TE expression (variance stabilized)
 p_TE_pca <- plotPCA(emx_TE_vst) + theme_classic() + ggtitle("PCA of TE expression")
 ggsave(p_TE_pca, file="6_TEtranscripts/invivo_bd/plots/TE_pca_emx.png", width=20, height=20, units="cm", dpi=320)
 ggsave(p_TE_pca, file="6_TEtranscripts/invivo_bd/plots/TE_pca_emx.svg", width=20, height=20, units="cm", dpi=320)
 
-
+# Normalize TE expression by the resulting sizeFactors of the gene expression data
 emx_TE_norm <- emx_TE
 emx_TE_norm[] <- mapply('/', emx_TE_norm, emx_genes_dds$sizeFactor)
+# Add TE classification to just show retrotransposons
 emx_TE_norm$TE_subfamily <- as.character(unlist(lapply(strsplit(rownames(emx_TE_norm), ':'), `[[`, 1)))
 emx_TE_norm$TE_family <- unlist(lapply(strsplit(rownames(emx_TE_norm), ':'), `[[`, 2))
 emx_TE_norm$TE_class <- unlist(lapply(strsplit(rownames(emx_TE_norm), ':'), `[[`, 3))
@@ -300,6 +345,7 @@ emx_TE_norm$TE_family <- as.character(ifelse(endsWith((emx_TE_norm$TE_family), '
 emx_TE_norm$TE_class <- as.character(ifelse(endsWith((emx_TE_norm$TE_class), '?'), substr(emx_TE_norm$TE_class, 1, (nchar(emx_TE_norm$TE_class)-1)),emx_TE_norm$TE_class))
 emx_TE_norm <- emx_TE_norm[which(emx_TE_norm$TE_class %in% c('LINE', 'LTR', 'SINE')),]
 
+# Expression of significantly different TE subfamilies
 emx_TE_signdiff_condition <- melt(emx_TE_exp$Mean)
 emx_TE_signdiff_condition <- emx_TE_signdiff_condition[emx_TE_signdiff_condition$Var1 %in% rownames(subset(emx_TE_res, emx_TE_res$padj < 0.05)),]
 emx_TE_signdiff_condition$value <- log2(emx_TE_signdiff_condition$value+0.5)
@@ -308,6 +354,7 @@ emx_TE_signdiff_condition$TE_class <- unlist(lapply(str_split(emx_TE_signdiff_co
 emx_TE_signdiff_condition$TE_family <- unlist(lapply(str_split(emx_TE_signdiff_condition$TE_subfamily, ':'), `[[`, 2))
 emx_TE_signdiff_condition$TE_subfamily <- unlist(lapply(str_split(emx_TE_signdiff_condition$TE_subfamily, ':'), `[[`, 1))
 
+# Mean expression per condition of significantly different TE subfamilies
 emx_TE_signdiff_condition_mean <- emx_TE_exp$Mean[rownames(subset(emx_TE_res, emx_TE_res$padj < 0.05)),]
 emx_TE_signdiff_condition_mean <- as.data.frame(emx_TE_signdiff_condition_mean)
 emx_TE_signdiff_condition_mean$TE_subfamily <- unlist(lapply(str_split(rownames(emx_TE_signdiff_condition_mean), ":"), `[[`, 1))
@@ -331,6 +378,7 @@ p_signdiff_TE_emx_annotation <- pheatmap(log2(emx_TE_signdiff_condition_mean[,c(
                                          main="Significantly different TE subfamilies in Emx animals\nTrim28 (padj < 0.05, log2FC > 0)")
 ggsave(p_signdiff_TE_emx_annotation, file='6_TEtranscripts/invivo_bd/plots/signdiff_TE_heatmap.svg', width=20, height=20, units="cm", dpi=96)
 
+# Barplot of significantly upregulated TE subfamilies in Trim28 KO
 emx_TE_res_df <-  as.data.frame(emx_TE_res)
 emx_TE_res_df$TE_subfamily <- unlist(lapply(str_split(rownames(emx_TE_res_df), ':'), `[[`, 1))
 emx_TE_signdiff_condition <- subset(emx_TE_signdiff_condition, emx_TE_signdiff_condition$Condition == 'ko')
@@ -346,41 +394,51 @@ p_signdiff_TE_emx <- ggplot(data=emx_TE_signdiff_condition, aes(x=TE_subfamily, 
 
 ggsave(p_signdiff_TE_emx, file='6_TEtranscripts/invivo_bd/plots/signdiff_TE.svg', width=15, height=15, units="cm", dpi=96)
 
-
-emx_iap_norm <- subset(emx_TE_norm, startsWith(emx_TE_norm$TE_subfamily, 'IAP'))
-emx_iap_norm <- emx_iap_norm[, emx_coldata$samples]
-
-emx_iap_norm_means <- merge(data.frame(ctrl_mean=rowMeans(emx_iap_norm[,subset(emx_coldata, emx_coldata$condition == 'ctrl')$samples])), data.frame(ko_mean=rowMeans(emx_iap_norm[,subset(emx_coldata, emx_coldata$condition == 'ko')$samples])), by='row.names')
-write.xlsx(emx_iap_norm_means, '/Volumes/Seagate Backup /trim28/09.10.19/6_TEtranscripts/invivo_bd/IAP_expression.xlsx', row.names = F)
-
-emx_iap_norm <- subset(emx_TE_norm, startsWith(emx_TE_norm$TE_subfamily, 'IAP'))
-emx_iap_norm <- emx_iap_norm[, c(emx_coldata$samples, "TE_subfamily")]
-emx_iap_norm <- merge(melt(emx_iap_norm), emx_coldata, by.x='variable', by.y='samples')
-p <- ggplot(emx_iap_norm, aes(y=value, x=condition, fill=condition)) + geom_boxplot() + theme_classic() 
-p + facet_wrap( ~ TE_subfamily, scales="free")
+# emx_iap_norm <- subset(emx_TE_norm, startsWith(emx_TE_norm$TE_subfamily, 'IAP'))
+# emx_iap_norm <- emx_iap_norm[, emx_coldata$samples]
+# 
+# emx_iap_norm_means <- merge(data.frame(ctrl_mean=rowMeans(emx_iap_norm[,subset(emx_coldata, emx_coldata$condition == 'ctrl')$samples])), data.frame(ko_mean=rowMeans(emx_iap_norm[,subset(emx_coldata, emx_coldata$condition == 'ko')$samples])), by='row.names')
+# write.xlsx(emx_iap_norm_means, '/Volumes/Seagate Backup /trim28/09.10.19/6_TEtranscripts/invivo_bd/IAP_expression.xlsx', row.names = F)
+# 
+# emx_iap_norm <- subset(emx_TE_norm, startsWith(emx_TE_norm$TE_subfamily, 'IAP'))
+# emx_iap_norm <- emx_iap_norm[, c(emx_coldata$samples, "TE_subfamily")]
+# emx_iap_norm <- merge(melt(emx_iap_norm), emx_coldata, by.x='variable', by.y='samples')
+# p <- ggplot(emx_iap_norm, aes(y=value, x=condition, fill=condition)) + geom_boxplot() + theme_classic() 
+# p + facet_wrap( ~ TE_subfamily, scales="free")
 
 # NPC ----
+# Read output from TEtranscripts
 npc <- fread('/Volumes/Seagate Backup /trim28/09.10.19/6_TEtranscripts/invitro_crispr/invitro_crispr.cntTable', data.table = F)
 colnames(npc)[-1] <- paste(unlist(lapply(strsplit(colnames(npc)[-1], '/'), `[[`, 5)), unlist(lapply(strsplit(colnames(npc)[-1], '/'), `[[`, 4)), unlist(lapply(strsplit(colnames(npc)[-1], '/'), `[[`, 6)), sep='_')
+# Gene counts
 npc_gene <- subset(npc, startsWith(npc$`gene/TE`, 'ENSMUS'))
 colnames(npc_gene)[1] <- 'gene_id'
 rownames(npc_gene) <- npc_gene$gene_id
 npc_gene <- npc_gene[,-1]
-
+# TE counts (where TE_id, in difference to TEclassification, is TE subfamily:TE family:TE class)
 npc_TE <- subset(npc, !startsWith(npc$`gene/TE`, 'ENSMUS'))
 colnames(npc_TE)[1] <- 'TE_id'
 rownames(npc_TE) <- npc_TE$TE_id
 npc_TE <- npc_TE[,-1]
 
+# Create the metadata 
 npc_coldata <- data.frame(samples=colnames(npc_gene), condition=unlist(lapply(strsplit(colnames(npc_gene), '_'), `[[`, 2)))
 rownames(npc_coldata) <- npc_coldata$samples
 npc_coldata$samples <- as.character(npc_coldata$samples)
 
+# Gene differential expression analysis testing for condition (Trim28 KO vs control)
 npc_genes_dds <- DESeqDataSetFromMatrix(npc_gene[,rownames(npc_coldata)], npc_coldata, design = ~ condition)
 npc_genes_dds <- DESeq(npc_genes_dds)
 npc_genes_res <- results(npc_genes_dds)
+# Calculate average expression on normalized reads on genes
 npc_genes_exp <- getAverage(npc_genes_dds)
 
+npc_genes_vst <- varianceStabilizingTransformation(npc_genes_dds)
+npc_gene_pca <- plotPCA(npc_genes_vst) + ylim(c(-30,20)) + theme_classic() + ggtitle("PCA - In vitro CRISPR gene expression")
+ggsave(npc_gene_pca, file="6_TEtranscripts/invitro_crispr/plots/gene_pca.svg", width=20, height=20, units="cm", dpi=96)
+
+
+# PCA plot based on protein coding genes
 npc_gene_protein <- merge(npc_gene, unique(transcript_gene[,-1]), by.x='row.names', by.y='gene_id')
 npc_gene_protein <- subset(npc_gene_protein, npc_gene_protein$gene_type == 'protein_coding')
 colnames(npc_gene_protein)[1] <- 'gene_id'
@@ -388,21 +446,27 @@ npc_genes_vst_protein <- varianceStabilizingTransformation(npc_genes_dds[npc_gen
 npc_gene_pca_protein <- plotPCA(npc_genes_vst_protein) + ylim(c(-30,20)) + theme_classic() + ggtitle("PCA - In vitro CRISPR gene expression")
 ggsave(npc_gene_pca_protein, file="6_TEtranscripts/invitro_crispr/plots/gene_protein_pca.svg", width=20, height=20, units="cm", dpi=96)
 
+# Mean plot based on gene expression
 p_gene_meanplot_npc <- meanPlot_cus(npc_genes_exp$Mean, test=npc_genes_res, l=0.5, p=0.05, c1='ko', c2='ctrl',ttl='', repel = FALSE) + labs(title="", subtitle="")
 ggsave(p_gene_meanplot_npc, file="6_TEtranscripts/invitro_crispr/plots/gene_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
+# TE differential expression analysis testing for differences in condition (Trim28 vs control)
 npc_TE_dds <- DESeqDataSetFromMatrix(npc_TE[,rownames(npc_coldata)], npc_coldata, design = ~ condition)
 npc_TE_dds <- DESeq(npc_TE_dds)
 npc_TE_res <- results(npc_TE_dds)
+# Calculate average expression on normalized reads on TEs
 npc_TE_exp <- getAverage(npc_TE_dds)
 npc_TE_vst <- varianceStabilizingTransformation(npc_TE_dds)
+
+# Plot PCA based on TE expression (variance stabilized) 
 npc_TE_pca <- plotPCA(npc_TE_vst) + theme_classic() + ggtitle("PCA - In vitro CRISPR TE expression")
 ggsave(npc_TE_pca, file="6_TEtranscripts/invitro_crispr/plots/TE_pca.svg", width=20, height=20, units="cm", dpi=96)
 
-
+# TE mean plot
 p_TE_meanplot_npc <- meanPlot_cus(npc_TE_exp$Mean, test=npc_TE_res, col2 = 'black', col3 = 'firebrick', p=0.05, c1='ko', c2='ctrl',ttl='', repel = F, l=0.5)  + labs(title="", subtitle="")
 ggsave(p_TE_meanplot_npc, file="6_TEtranscripts/invitro_crispr/plots/TE_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
+# Boxplot showing expression of Trim28 (normalized expression)
 npc_gene_norm <- counts(npc_genes_dds, normalized = TRUE)
 npc_gene_norm <- merge(npc_gene_norm, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
 npc_gene_norm_trim28 <- as.data.frame(t(npc_gene_norm[which(npc_gene_norm$gene_name == 'Trim28'),as.character(npc_coldata$samples)]))
@@ -422,6 +486,7 @@ p_trim28_npc <- ggplot(npc_gene_norm_trim28, aes(x=Condition, y=value, fill=gRNA
 
 ggsave(p_trim28_npc, file="6_TEtranscripts/invitro_crispr/plots/trim28.svg", width=20, height=20, units="cm", dpi=96)
 
+# Subset of upregulated genes to check for GO term enrichment
 npc_upreg <- as.data.frame(as.matrix(subset(npc_genes_res, npc_genes_res$log2FoldChange > 0 & npc_genes_res$padj < 0.05)))
 npc_upreg <- merge(npc_upreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
 colnames(npc_upreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'P-adj', 'Gene Name')
@@ -429,6 +494,7 @@ colnames(npc_upreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat
 write.xlsx(npc_upreg[,c(8,1,3,7)], '6_TEtranscripts/invitro_crispr/upregulated_genes.xlsx', row.names = FALSE, col.names=TRUE)
 write.table(unique(npc_upreg$`Gene Name`), 'GO_analysis/invitro_crispr/upregulated/sign_upreg_genes.txt', row.names = FALSE, col.names=FALSE, quote = F)
 
+# Subset of downregulated genes to check for GO term enrichment
 npc_dwnreg <- as.data.frame(as.matrix(subset(npc_genes_res, npc_genes_res$log2FoldChange < 0 & npc_genes_res$padj < 0.05)))
 npc_dwnreg <- merge(npc_dwnreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
 colnames(npc_dwnreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'P-adj', 'Gene Name')
@@ -436,9 +502,11 @@ colnames(npc_dwnreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'sta
 write.xlsx(npc_dwnreg[,c(8,1,3,7)], 'multimapping/6_TEtranscripts/invitro_crispr/downregulated_genes.xlsx', row.names = FALSE, col.names=TRUE)
 write.table(unique(npc_dwnreg$`Gene Name`), 'GO_analysis/invitro_crispr/downregulated/sign_downreg_genes.txt', row.names = FALSE, col.names=FALSE, quote = F)
 
+# Subset of expressed genes to use as background on GO term enrichment tests
 npc_gene_expressed <- npc_gene[which(apply(npc_gene, 1, more_10) > 0),]
 write(rownames(npc_gene_expressed), 'GO_analysis/invitro_crispr/background_npc.txt')
 
+# Normalize TE expression by the resulting sizeFactors of gene expression
 npc_TE_norm <- npc_TE
 npc_TE_norm[] <- mapply('/', npc_TE_norm, npc_genes_dds$sizeFactor)
 npc_TE_norm$TE_subfamily <- as.character(unlist(lapply(strsplit(rownames(npc_TE_norm), ':'), `[[`, 1)))
@@ -452,6 +520,7 @@ npc_TE_norm$ID <- rownames(npc_TE_norm)
 npc_TE_signdiff_retro <- rownames(npc_TE_res[which(npc_TE_res$padj < 0.05 ),])[which(rownames(npc_TE_res[which(npc_TE_res$padj < 0.05 ),]) %in% rownames(npc_TE_norm))]
 npc_TE_signdiff_retro <- npc_TE_norm[npc_TE_signdiff_retro, as.character(npc_coldata$samples)]
 
+# Mean TE expression per condition of signifiantly different TEs
 npc_TE_signdiff_condition <- melt(npc_TE_exp$Mean)
 npc_TE_signdiff_condition <- npc_TE_signdiff_condition[npc_TE_signdiff_condition$Var1 %in% rownames(subset(npc_TE_res, npc_TE_res$padj < 0.05)),]
 npc_TE_signdiff_condition$value <- log2(npc_TE_signdiff_condition$value+0.5)
@@ -481,7 +550,7 @@ p_signdiff_TE_npc_annotation <- pheatmap(log2(npc_TE_signdiff_condition_mean[,c(
 ggsave(p_signdiff_TE_npc_annotation, file='6_TEtranscripts/invitro_crispr/plots/signdiff_TE_heatmap.svg', width=20, height=25, units="cm", dpi=96)
 
 
-
+# Barplot of significantly upregulated TE subfamilies in Trim28 KO
 npc_TE_res_df <-  as.data.frame(npc_TE_res)
 npc_TE_res_df$TE_subfamily <- unlist(lapply(str_split(rownames(npc_TE_res_df), ':'), `[[`, 1))
 npc_TE_signdiff_condition <- subset(npc_TE_signdiff_condition, npc_TE_signdiff_condition$Condition == 'ko')
@@ -500,26 +569,34 @@ ggsave(p_signdiff_TE_npc, file='6_TEtranscripts/invitro_crispr/plots/signdiff_TE
 
 
 # CRISPR invivo ---- 
+# Read output from TEtranscripts
 invivo_crispr <-  fread('6_TEtranscripts/invivo_crispr/invivo_crispr.cntTable', data.table = F)
 colnames(invivo_crispr)[-1] <- paste(unlist(lapply(strsplit(colnames(invivo_crispr)[-1], '/'), `[[`, 5)), unlist(lapply(strsplit(colnames(invivo_crispr)[-1], '/'), `[[`, 4)), sep='_')
+
+# Gene counts
 invivo_crispr_gene <- subset(invivo_crispr, startsWith(invivo_crispr$`gene/TE`, 'ENSMUS'))
 colnames(invivo_crispr_gene)[1] <- 'gene_id'
 rownames(invivo_crispr_gene) <- invivo_crispr_gene$gene_id
 invivo_crispr_gene <- invivo_crispr_gene[,-1]
 
+# Create the metadata 
 invivo_crispr_coldata <- data.frame(samples=colnames(invivo_crispr_gene), condition=unlist(lapply(strsplit(colnames(invivo_crispr_gene), '_'), `[[`, 3)))
 invivo_crispr_coldata$type <- unlist(lapply(strsplit(colnames(invivo_crispr_gene), '_'), `[[`, 2))
 rownames(invivo_crispr_coldata) <- invivo_crispr_coldata$samples
 invivo_crispr_coldata$samples <- as.character(invivo_crispr_coldata$samples)
 
+# Gene differential expression analysis testing for condition (Trim28 KO vs control)
 invivo_crispr_genes_dds <- DESeqDataSetFromMatrix(invivo_crispr_gene[,rownames(invivo_crispr_coldata)], invivo_crispr_coldata, design = ~ condition)
 invivo_crispr_genes_dds <- DESeq(invivo_crispr_genes_dds)
 invivo_crispr_genes_res <- results(invivo_crispr_genes_dds)
+# Calculate average expression on normalized reads on genes
 invivo_crispr_genes_exp <- getAverage(invivo_crispr_genes_dds)
 
+# Mean plot based on gene expression
 p_gene_meanplot_invivocrispr <- meanPlot_cus(invivo_crispr_genes_exp$Mean, test=invivo_crispr_genes_res, l=0.5,p=0.05, c1='ko', c2='ctrl',ttl='Gene DEA in invivo CRISPR KO experiment', repel = FALSE) + labs(title="", subtitle="")
 ggsave(p_gene_meanplot_invivocrispr, file="6_TEtranscripts/invivo_crispr/plots/gene_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
+# Boxplot showing expression of Trim28 (normalized expression)
 invivo_crispr_gene_norm <- counts(invivo_crispr_genes_dds, normalized = TRUE)
 invivo_crispr_gene_norm <- merge(invivo_crispr_gene_norm, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
 invivo_crispr_gene_norm_trim28 <- as.data.frame(t(invivo_crispr_gene_norm[which(invivo_crispr_gene_norm$gene_name == 'Trim28'),as.character(invivo_crispr_coldata$samples)]))
@@ -547,12 +624,13 @@ p_trim28_invivocrispr <- ggplot(invivo_crispr_gene_norm_trim28[rownames(invivo_c
     axis.title.y = element_text(size = 15,margin = margin(t = 0, r = 20, b = 0, l = 0)))  + scale_y_continuous(limits = c(0, 1600))
 ggsave(p_trim28_invivocrispr, file="6_TEtranscripts/invivo_crispr/plots/trim28.svg", width=20, height=20, units="cm", dpi=96)
 
+# Subset of upregulated genes to check for GO term enrichment
 invivo_crispr_upreg <- as.data.frame(as.matrix(subset(invivo_crispr_genes_res, invivo_crispr_genes_res$log2FoldChange > 0 & invivo_crispr_genes_res$padj < 0.05)))
 invivo_crispr_upreg <- merge(invivo_crispr_upreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
 colnames(invivo_crispr_upreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'P-adj', 'Gene Name')
-
 write.xlsx(invivo_crispr_upreg[,c(8,1,3,7)], '6_TEtranscripts/invivo_crispr/upregulated_genes.xlsx', row.names = FALSE, col.names=TRUE)
 
+# TE counts (where TE_id, in difference to TEclassification, is TE subfamily:TE family:TE class)
 invivo_crispr_TE <- subset(invivo_crispr, !startsWith(invivo_crispr$`gene/TE`, 'ENSMUS'))
 colnames(invivo_crispr_TE)[1] <- 'TE_id'
 rownames(invivo_crispr_TE) <- invivo_crispr_TE$TE_id
@@ -563,25 +641,32 @@ invivo_crispr_TE$TE_family <- unlist(lapply(strsplit(rownames(invivo_crispr_TE),
 invivo_crispr_TE$TE_class <- unlist(lapply(strsplit(rownames(invivo_crispr_TE), ':'), `[[`, 3))
 invivo_crispr_TE$TE_family <- as.character(ifelse(endsWith((invivo_crispr_TE$TE_family), '?'), substr(invivo_crispr_TE$TE_family, 1, (nchar(invivo_crispr_TE$TE_family)-1)),invivo_crispr_TE$TE_family))
 invivo_crispr_TE$TE_class <- as.character(ifelse(endsWith((invivo_crispr_TE$TE_class), '?'), substr(invivo_crispr_TE$TE_class, 1, (nchar(invivo_crispr_TE$TE_class)-1)),invivo_crispr_TE$TE_class))
-invivo_crispr_TE <- subset(invivo_crispr_TE, invivo_crispr_TE$TE_class %in% c('LINE', 'LTR', 'SINE'))
+# invivo_crispr_TE <- subset(invivo_crispr_TE, invivo_crispr_TE$TE_class %in% c('LINE', 'LTR', 'SINE'))
 
+# TE differential expression analysis testing for differences in condition (Trim28 vs control)
 invivo_crispr_TE_dds <- DESeqDataSetFromMatrix(invivo_crispr_TE[,names(invivo_crispr_genes_dds$sizeFactor)], invivo_crispr_coldata, design = ~ condition)
 invivo_crispr_TE_dds <- DESeq(invivo_crispr_TE_dds)
 invivo_crispr_TE_res <- results(invivo_crispr_TE_dds)
+# Calculate average expression on normalized reads on TEs
 invivo_crispr_TE_exp <- getAverage(invivo_crispr_TE_dds)
 
+# TE mean plot
 p_TE_meanplot_invivocrispr <- meanPlot_cus(invivo_crispr_TE_exp$Mean, test=invivo_crispr_TE_res, l=0.5, p=0.05, c1='ko', col2='black', col3='firebrick', c2='ctrl',ttl='TE subfamilies at the CRISPR KO experiment', repel = FALSE) + labs(title="", subtitle="")
 ggsave(p_TE_meanplot_invivocrispr, file="6_TEtranscripts/invivo_crispr/plots/TE_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
+# Create the metadata for the Cas experiment
 invivo_crispr_cas_coldata <- subset(invivo_crispr_coldata, startsWith(invivo_crispr_coldata$samples, 'cas') | invivo_crispr_coldata$condition == 'ctrl')
+# TE DEA testing for differences in condition (Trim28 vs control) for the cas experiment
 invivo_crispr_cas_TE_dds <- DESeqDataSetFromMatrix(invivo_crispr_TE[,rownames(invivo_crispr_cas_coldata)], invivo_crispr_cas_coldata, design = ~ condition)
 invivo_crispr_cas_TE_dds <- DESeq(invivo_crispr_cas_TE_dds)
 invivo_crispr_cas_TE_res <- results(invivo_crispr_cas_TE_dds)
 invivo_crispr_cas_TE_exp <- getAverage(invivo_crispr_cas_TE_dds)
-
+# TE mean plot (cas experiment)
 p_TE_meanplot_invivocrispr_cas <- meanPlot_cus(invivo_crispr_cas_TE_exp$Mean, test=invivo_crispr_cas_TE_res, l=0.5,p=0.05, c1='ko', c2='ctrl',ttl='TE DEA in invivo CRISPR KO experiment - Cas', repel = FALSE, col2 = 'black') + labs(title="", subtitle="")
 
+# Create the metadata for the FlexCas experiment
 invivo_crispr_flexcas_coldata <- subset(invivo_crispr_coldata, startsWith(invivo_crispr_coldata$samples, 'flexcas') | invivo_crispr_coldata$condition == 'ctrl')
+# TE DEA testing for differences in condition (Trim28 vs control) for the cas experiment
 invivo_crispr_flexcas_TE_dds <- DESeqDataSetFromMatrix(invivo_crispr_TE[,rownames(invivo_crispr_flexcas_coldata)], invivo_crispr_flexcas_coldata, design = ~ condition)
 invivo_crispr_flexcas_TE_dds <- DESeq(invivo_crispr_flexcas_TE_dds)
 invivo_crispr_flexcas_TE_res <- results(invivo_crispr_flexcas_TE_dds)
@@ -591,26 +676,32 @@ p_TE_meanplot_invivocrispr_flexcas <- meanPlot_cus(invivo_crispr_flexcas_TE_exp$
 
 
 # Adult invivo: FLOXED ----
+# Read output from TEtranscripts
 invivo_adult <- fread('6_TEtranscripts/invivo_adult/invivo_adult.cntTable', data.table = F)
 colnames(invivo_adult)[-1] <- paste(unlist(lapply(strsplit(colnames(invivo_adult)[-1], '/'), `[[`, 5)), unlist(lapply(strsplit(colnames(invivo_adult)[-1], '/'), `[[`, 4)), sep='_')
 colnames(invivo_adult)[-1] <- paste(unlist(lapply(strsplit(colnames(invivo_adult)[-1], '_'), `[[`, 1)), ifelse(unlist(lapply(strsplit(colnames(invivo_adult)[-1], '_'), `[[`, 2)) == 'ctrl', 'ko', 'ctrl'), sep='_')
+# Gene counts
 invivo_adult_gene <- subset(invivo_adult, startsWith(invivo_adult$`gene/TE`, 'ENSMUS'))
 colnames(invivo_adult_gene)[1] <- 'gene_id'
 rownames(invivo_adult_gene) <- invivo_adult_gene$gene_id
 invivo_adult_gene <- invivo_adult_gene[,-1]
-
+# Create the metadata 
 invivo_adult_coldata <- data.frame(samples=colnames(invivo_adult_gene), condition=unlist(lapply(strsplit(colnames(invivo_adult_gene), '_'), `[[`, 2)))
 rownames(invivo_adult_coldata) <- invivo_adult_coldata$samples
 invivo_adult_coldata$samples <- as.character(invivo_adult_coldata$samples)
 
+# Gene differential expression analysis testing for condition (Trim28 KO vs control)
 invivo_adult_genes_dds <- DESeqDataSetFromMatrix(invivo_adult_gene[,rownames(invivo_adult_coldata)], invivo_adult_coldata, design = ~ condition)
 invivo_adult_genes_dds <- DESeq(invivo_adult_genes_dds)
 invivo_adult_genes_res <- results(invivo_adult_genes_dds)
+# Calculate average expression on normalized reads on genes
 invivo_adult_genes_exp <- getAverage(invivo_adult_genes_dds)
 
+# Mean plot based on gene expression
 p_gene_meanplot_invivoadult <- meanPlot_cus(invivo_adult_genes_exp$Mean, test=invivo_adult_genes_res, l=0.5,p=0.05, c1='ko', c2='ctrl',ttl='Gene DEA at floxed adult', repel = FALSE) + labs(title="", subtitle="")
 ggsave(p_gene_meanplot_invivoadult, file="6_TEtranscripts/invivo_adult/plots/gene_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
+# Boxplot showing expression of Trim28 (normalized expression)
 invivo_adult_gene_norm <- counts(invivo_adult_genes_dds, normalized = TRUE)
 invivo_adult_gene_norm <- merge(invivo_adult_gene_norm, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
 invivo_adult_gene_norm_trim28 <- as.data.frame(t(invivo_adult_gene_norm[which(invivo_adult_gene_norm$gene_name == 'Trim28'),as.character(invivo_adult_coldata$samples)]))
@@ -629,18 +720,19 @@ p_trim28_invivoadult <- ggplot(invivo_adult_gene_norm_trim28, aes(x=Condition, y
 
 ggsave(p_trim28_invivoadult, file="6_TEtranscripts/invivo_adult/plots/trim28.svg", width=20, height=20, units="cm", dpi=96)
 
+# Subset of upregulated genes to check for GO term enrichment
 invivo_adult_upreg <- as.data.frame(as.matrix(subset(invivo_adult_genes_res, invivo_adult_genes_res$log2FoldChange > 0 & invivo_adult_genes_res$padj < 0.05)))
 invivo_adult_upreg <- merge(invivo_adult_upreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
 colnames(invivo_adult_upreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'P-adj', 'Gene Name')
-
 write.xlsx(invivo_adult_upreg[,c(8,1,3,7)], '6_TEtranscripts/invivo_adult/upregulated_genes.xlsx', row.names = FALSE, col.names=TRUE)
 
+# Subset of downregulated genes to check for GO term enrichment
 invivo_adult_dwnreg <- as.data.frame(as.matrix(subset(invivo_adult_genes_res, invivo_adult_genes_res$log2FoldChange < 0 & invivo_adult_genes_res$padj < 0.05)))
 invivo_adult_dwnreg <- merge(invivo_adult_dwnreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
 colnames(invivo_adult_dwnreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'P-adj', 'Gene Name')
-
 write.xlsx(invivo_adult_dwnreg[,c(8,1,3,7)], '6_TEtranscripts/invivo_adult/downregulated_genes.xlsx', row.names = FALSE, col.names=TRUE)
 
+# TE counts (where TE_id, in difference to TEclassification, is TE subfamily:TE family:TE class)
 invivo_adult_TEs <- subset(invivo_adult, !startsWith(invivo_adult$`gene/TE`, 'ENSMUS'))
 colnames(invivo_adult_TEs)[1] <- 'TE_id'
 rownames(invivo_adult_TEs) <- invivo_adult_TEs$TE_id
@@ -651,19 +743,18 @@ invivo_adult_TEs$TE_family <- unlist(lapply(strsplit(rownames(invivo_adult_TEs),
 invivo_adult_TEs$TE_class <- unlist(lapply(strsplit(rownames(invivo_adult_TEs), ':'), `[[`, 3))
 invivo_adult_TEs$TE_family <- as.character(ifelse(endsWith((invivo_adult_TEs$TE_family), '?'), substr(invivo_adult_TEs$TE_family, 1, (nchar(invivo_adult_TEs$TE_family)-1)),invivo_adult_TEs$TE_family))
 invivo_adult_TEs$TE_class <- as.character(ifelse(endsWith((invivo_adult_TEs$TE_class), '?'), substr(invivo_adult_TEs$TE_class, 1, (nchar(invivo_adult_TEs$TE_class)-1)),invivo_adult_TEs$TE_class))
-invivo_adult_TEs <- subset(invivo_adult_TEs, invivo_adult_TEs$TE_class %in% c('LINE', 'LTR', 'SINE'))
 
+# TE differential expression analysis testing for differences in condition (Trim28 vs control)
 invivo_adult_TEs_dds <- DESeqDataSetFromMatrix(invivo_adult_TEs[,rownames(invivo_adult_coldata)], invivo_adult_coldata, design = ~ condition)
 invivo_adult_TEs_dds <- DESeq(invivo_adult_TEs_dds)
 invivo_adult_TEs_res <- results(invivo_adult_TEs_dds)
 invivo_adult_TEs_vst <- varianceStabilizingTransformation(invivo_adult_TEs_dds)
-invivo_adult_TE_prcomp <- make_pca(t(assay(invivo_adult_TEs_vst))[ , apply(t(assay(invivo_adult_TEs_vst)), 2, var) != 0],invivo_adult_coldata,c1='Control',c2='Ko', folder='multimapping/plots/invivo_adult/TE_', TRUE, '\nAdult Trim28 (TEs only)')
 invivo_adult_TEs_exp <- getAverage(invivo_adult_TEs_dds)
 
 p_TE_meanplot_invivoadult <- meanPlot_cus(invivo_adult_TEs_exp$Mean, test=invivo_adult_TEs_res, p=0.05, l=0.5, c1='ko', c2='ctrl', col2='black', col3='firebrick', ttl='', repel = FALSE) + labs(title="", subtitle="")
 ggsave(p_TE_meanplot_invivoadult, file="6_TEtranscripts/invivo_adult/plots/TE_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
-# EMX overlap FLOXED --- 
+# EMX dysregulated gene intersection with adult invivo floxed ----
 emx_upreg <- as.data.frame(as.matrix(subset(emx_genes_res, emx_genes_res$log2FoldChange > 0.5 & emx_genes_res$padj < 0.05)))
 emx_dwreg <- as.data.frame(as.matrix(subset(emx_genes_res, emx_genes_res$log2FoldChange < -0.5 & emx_genes_res$padj < 0.05)))
 
@@ -689,30 +780,56 @@ emx_invivo_adult_dwreg_venn <- draw.pairwise.venn(nrow(invivo_adult_dwnreg), nro
 ggsave(emx_invivo_adult_dwreg_venn, file="/Volumes/Seagate Backup /trim28/09.10.19/6_TEtranscripts/emx_invivo_adult_dwreg_venn.svg", width=20, height=20, units="cm", dpi=320)
 
 # EMX GO analysis ----
-# Invivo bd without adult 
+# Upregulated genes in Emx that are not upregulated in adult invivo crispr (floxed) KO 
+emx_upreg <- merge(emx_upreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
+colnames(emx_upreg)[1] <- 'Gene id'
+colnames(emx_upreg)[ncol(emx_upreg)] <- 'Gene Name'
 paste(emx_upreg[which(!emx_upreg$`Gene Name` %in% invivo_adult_upreg$`Gene Name`),c(8)], collapse = '|')
 write.xlsx(emx_upreg[which(!emx_upreg$`Gene Name` %in% invivo_adult_upreg$`Gene Name`),c(8,1,3,7)], 'GO_analysis/invivo_bd/upregulated/upregulated_genes_emx_not_invivo_adult.xlsx', col.names = T, row.names = F)
 write(unique(emx_upreg[which(!emx_upreg$`Gene Name` %in% invivo_adult_upreg$`Gene Name`),'Gene Name']), 'GO_analysis/invivo_bd/upregulated/sign_upreg_genes_not_in_adult.txt')
 
+# Coordinates of those
 gencode <- fread('/Volumes/Seagate Backup /annotation/mouse/gencode/gencode.vM20.annotation.bed', data.table = F)
 colnames(gencode) <- c('chr', 'start', 'end', 'gene_id', 'strand')
 rownames(gencode) <- gencode$gene_id
 write.table(gencode[emx_upreg$`Gene ID`,], '6_TEtranscripts/invivo_bd/upregulated_genes_emx_not_invivo_adult.bed', col.names = T, row.names = F, sep='\t', quote = F)
 
+# Downregulated genes in Emx that are not downregulated in adult invivo crispr (floxed) KO 
 write(unique(emx_dwreg[which(!emx_dwreg$`Gene Name` %in% invivo_adult_dwnreg$`Gene Name`),'Gene Name']), 'GO_analysis/invivo_bd/downregulated/sign_downreg_genes_not_in_adult.txt')
 
-# Invivo bd viral defence ----
+# All Emx upregulated genes
+emx_upreg_out <- merge(emx_upreg, unique(transcript_gene[,c('gene_id', 'gene_name')]), by.x='row.names', by.y='gene_id', all.x=T)
+colnames(emx_upreg_out)[1] <- 'gene_id'
+write.xlsx(emx_upreg_out, 'GO_analysis/invivo_bd/upregulated/upregulated_genes_emx.xlsx', col.names = T, row.names = F)
+# All Emx downregulated genes
+emx_dwreg_out <- merge(emx_dwreg, unique(transcript_gene[,c('gene_id', 'gene_name')]), by.x='row.names', by.y='gene_id', all.x=T)
+colnames(emx_dwreg_out)[1] <- 'gene_id'
+write.xlsx(emx_dwreg_out, 'GO_analysis/invivo_bd/downregulated/downregulated_genes_emx.xlsx', col.names = T, row.names = F)
+
+# All upregulated genes at in vivo adult floxed KO
+invivo_adult_upreg_out <- merge(invivo_adult_upreg, unique(transcript_gene[,c('gene_id', 'gene_name')]), by.x='row.names', by.y='gene_id', all.x=T)
+colnames(invivo_adult_upreg_out)[1] <- 'gene_id'
+write.xlsx(invivo_adult_upreg_out, 'GO_analysis/invivo_adult/upregulated/upregulated_genes_invivo_adult.xlsx', col.names = T, row.names = F)
+# All downregulated genes at in vivo adult floxed KO
+invivo_adult_dwreg_out <- merge(invivo_adult_dwnreg, unique(transcript_gene[,c('gene_id', 'gene_name')]), by.x='row.names', by.y='gene_id', all.x=T)
+colnames(invivo_adult_dwreg_out)[1] <- 'gene_id'
+write.xlsx(invivo_adult_dwreg_out, 'GO_analysis/invivo_adult/downregulated/downregulated_genes_invivo_adult.xlsx', col.names = T, row.names = F)
+
+# EMX viral defence ----
 viral_defence <- c("IFI16","IFI27","MS2","OAS1","IRF7","OASL","OAS2","OAS3","ISG20","MX1","IFIH1","IFIT3","IFI6","STAT1","IFIT2","ISG15","DDX58","DHX58","IFITM2","IFI35","B2M","IRF9","IFITM1","IFIT1","MX2")
 viral_defence <- tools::toTitleCase(tolower(viral_defence))
 viral_defence <- data.frame(gene_name=viral_defence)
 
 viral_defence <- unique(merge(viral_defence, transcript_gene[,c(2,3)], by='gene_name'))
 
+# Normalized expression of viral defence genes in Emx animals
 emx_gene_norm_viral_defence <- emx_gene_norm[which(emx_gene_norm$gene_name %in% viral_defence$gene_name),c('gene_name', as.character(emx_coldata$samples))]
 rownames(emx_gene_norm_viral_defence) <- emx_gene_norm_viral_defence$gene_name
+# Normalized expression of viral defence genes in Emx animals with more than 10 reads (sum of all samples)
 emx_gene_norm_viral_defence_more10 <- emx_gene_norm_viral_defence[which(rowSums(emx_gene_norm_viral_defence[,emx_coldata$samples]) > 10),]
 emx_gene_norm_viral_defence_more10 <- merge(emx_gene_norm_viral_defence_more10, unique(transcript_gene[,c(2,3)]), by='gene_name')
 
+# Log2 fold change confidence intervals of viral defence genes in Emx animals
 emx_viral_defence_fc <- emx_genes_res_df[viral_defence$gene_id,c('log2FoldChange', 'ci_low', 'ci_high', 'padj'), drop=FALSE]
 emx_viral_defence_fc <- merge(emx_viral_defence_fc, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
 emx_viral_defence_fc$reg <- ifelse(emx_viral_defence_fc$log2FoldChange < 0, 'logFC < 0', 'logFC > 0')
@@ -737,7 +854,7 @@ p_viral_defence <- ggplot() +
   geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = -0.5, ymax = 0.5), fill = 'lightpink',  alpha = 0.3,size = 2)
 ggsave(p_viral_defence, file="6_TEtranscripts/invivo_bd/plots/viral_defence.svg", width=20, height=20, units="cm", dpi=96)
 
-# Invivo bd immune response ----
+# EMX immune response ----
 immune_response <- fread('/Volumes/Seagate Backup /trim28/09.10.19/GO_analysis/invivo_bd/inmmune_response_GO0006954.tab', data.table = F)
 immune_response <- immune_response$V1
 immune_response <- tools::toTitleCase(tolower(immune_response))
@@ -745,11 +862,14 @@ immune_response <- data.frame(gene_name=immune_response)
 
 immune_response <- unique(merge(immune_response, transcript_gene[,c(2,3)], by='gene_name'))
 
+# Normalized gene expression of inmmune response related genes
 emx_gene_norm_immune_response <- emx_gene_norm[which(emx_gene_norm$gene_name %in% immune_response$gene_name),c('gene_name', as.character(emx_coldata$samples))]
 rownames(emx_gene_norm_immune_response) <- emx_gene_norm_immune_response$gene_name
+# Normalized gene expression of inmmune response related genes with more than 10 reads (sum of samples)
 emx_gene_norm_immune_response_more10 <- emx_gene_norm_immune_response[which(rowSums(emx_gene_norm_immune_response[,emx_coldata$samples]) > 10),]
 emx_gene_norm_immune_response_more10 <- merge(emx_gene_norm_immune_response_more10, unique(transcript_gene[,c(2,3)]), by='gene_name')
 
+# Log2 confidence intervals of immune response related genes in Emx animals
 emx_immune_response_fc <- emx_genes_res_df[immune_response$gene_id,c('log2FoldChange', 'ci_low', 'ci_high', 'padj'), drop=FALSE]
 emx_immune_response_fc <- merge(emx_immune_response_fc, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
 emx_immune_response_fc$reg <- ifelse(emx_immune_response_fc$log2FoldChange < 0, 'logFC < 0', 'logFC > 0')
@@ -793,8 +913,7 @@ p_immune_response_complete <- ggplot() +
 ggsave(p_immune_response_complete, file="6_TEtranscripts/invivo_bd/plots/immune_response_complete.svg", width=40, height=100, units="cm", dpi=96)
 ggsave(p_immune_response, file="6_TEtranscripts/invivo_bd/plots/immune_response.svg", width=30, height=20, units="cm", dpi=96)
 
-# Invivo microglia ----
-# Invivo bd microglia ----
+# EMX microglia ----
 microglia <- c('Cd9', 'Cd11c',
                'Clec7a', 'Cd63',
                'Cst7', 'Csf1',
@@ -816,16 +935,17 @@ microglia <- c('Cd9', 'Cd11c',
 microglia <- data.frame(gene_name=microglia)
 microglia <- unique(merge(microglia, transcript_gene[,c(2,3)], by='gene_name'))
 
+# Normalized expression of microglia related genes in Emx animals
 invivo_bd_gene_norm_microglia <- invivo_bd_gene_norm[which(invivo_bd_gene_norm$gene_name %in% microglia$gene_name),c('gene_name', as.character(invivo_bd_coldata$samples))]
 rownames(invivo_bd_gene_norm_microglia) <- invivo_bd_gene_norm_microglia$gene_name
+# Normalized expression of microglia related genes in Emx animals with more than 10 reads (sum of samples)
 invivo_bd_gene_norm_microglia_more10 <- invivo_bd_gene_norm_microglia[which(rowSums(invivo_bd_gene_norm_microglia[,invivo_bd_coldata$samples]) > 10),]
 invivo_bd_gene_norm_microglia_more10 <- merge(invivo_bd_gene_norm_microglia_more10, unique(transcript_gene[,c(2,3)]), by='gene_name')
 
+# Log2 confidence intervals of microglia activation genes
 invivo_bd_genes_res_df <- as.data.frame(invivo_bd_genes_res)
 invivo_bd_genes_res_df$ci_low <- invivo_bd_genes_res_df$log2FoldChange - (qnorm(0.05)*invivo_bd_genes_res_df$lfcSE)
-# invivo_bd_genes_res_df$ci_low <- 2^(invivo_bd_genes_res_df$log2FoldChange - invivo_bd_genes_res_df$lfcSE) 
 invivo_bd_genes_res_df$ci_high <- invivo_bd_genes_res_df$log2FoldChange + (qnorm(0.05)*invivo_bd_genes_res_df$lfcSE)
-# invivo_bd_genes_res_df$ci_high <- 2^(invivo_bd_genes_res_df$log2FoldChange + invivo_bd_genes_res_df$lfcSE) 
 
 invivo_bd_microglia_fc <- invivo_bd_genes_res_df[microglia$gene_id,c('log2FoldChange', 'ci_low', 'ci_high'), drop=FALSE]
 invivo_bd_microglia_fc <- merge(invivo_bd_microglia_fc, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
@@ -858,24 +978,26 @@ invivo_bd_gene_norm_microglia_more10$gene_name <- factor(invivo_bd_gene_norm_mic
 invivo_bd_gene_norm_microglia_more10 <- subset(invivo_bd_gene_norm_microglia_more10, !is.na(invivo_bd_gene_norm_microglia_more10$gene_name))
 
 
-# GO Biological process ----
+# EMX GO Biological process ----
 GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/not_in_adult/slim_biological_process_upreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/slim_biological_process_upreg_emx', morethan = 4,  botlog2fc = -0.5, toplog2fc = 0.5)
 GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/slim_biological_process_downreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/slim_biological_process_downreg_emx', morethan = 4,  botlog2fc = -0.5, toplog2fc = 0.5)
 
-# GO Biological process without adult ----
+# EMX GO Biological process without genes that are also dysregulated in adult invivo crispr ----
 GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/not_in_adult/slim_biological_process_upreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_biological_process/not_in_adult/slim_biological_process_upreg_emx_not_in_adult', morethan = 4, botlog2fc = -0.5, toplog2fc = 0.5)
 GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/not_in_adult/slim_biological_process_downreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_biological_process/not_in_adult/slim_biological_process_downreg_emx_not_in_adult', morethan = 4, botlog2fc = -0.5, toplog2fc = 0.5)
 
-# GO Molecular function ----
+# EMX GO Molecular function ----
 GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/slim_molecular_function_upreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/slim_molecular_function_upreg_emx', morethan = 4, botlog2fc = -0.5, toplog2fc = 0.5)
 View(GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/slim_molecular_function_downreg_emx.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/slim_molecular_function_downreg_emx', morethan = 4, botlog2fc = -0.5, toplog2fc = 0.5))
 
-# GO Molecular function without adult ----
+# EMX GO Molecular function without genes that are also dysregulated in adult invivo crispr ----
 GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/not_in_adult/slim_molecular_function_upreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/upregulated/slim_molecular_function/not_in_adult/slim_molecular_function_upreg_emx_not_in_adult', morethan = 4, toplog2fc = 0.5)
 GO_json(file_name='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/not_in_adult/slim_molecular_function_downreg_emx_not_in_adult.json', prefix='/Volumes/Seagate Backup /trim28/GO_analysis/invivo_brain_dev/downregulated/slim_molecular_function/not_in_adult/slim_molecular_function_downreg_emx_not_in_adult', morethan = 4, botlog2fc = -0.5, toplog2fc = 0.5)
 
 # EMX MMERVK10C upregulated ----
+# Read quantification of full length MMERVK10C elements (unique mapping)
 MMERVK10C_count <- fread('/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/2_readcount/fullMMERVK10C_count_matrix_2.csv', data.table = F)
+# Create the metadata 
 MMERVK10C_coldata <- data.frame(sample=paste(sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 5), sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 6), sep='_'),
                            experiment=sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 3),
                            condition=sapply(str_split(colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)], '/'), `[[`, 4))
@@ -890,60 +1012,69 @@ colnames(MMERVK10C_count)[7:ncol(MMERVK10C_count)] <- ifelse(sapply(str_split(co
 
 rownames(MMERVK10C_coldata) <- MMERVK10C_coldata$sample
 rownames(MMERVK10C_count) <- MMERVK10C_count$Geneid
+
+# Subset quantification of NPCs
 MMERVK10C_count_npc <- MMERVK10C_count[,c('Chr', 'Start', 'End', 'Geneid', 'Strand', subset(MMERVK10C_coldata, MMERVK10C_coldata$experiment == 'invitro_crispr')$sample)]
 MMERVK10C_coldata_npc <- subset(MMERVK10C_coldata, MMERVK10C_coldata$experiment == 'invitro_crispr')
-
+# Differential MMERVK10C expression analysis testing for difference in condition in NPCs (Trim28 KO vs control)
 MMERVK10C_dds_npc <- DESeqDataSetFromMatrix(MMERVK10C_count_npc[,rownames(MMERVK10C_coldata_npc)], MMERVK10C_coldata_npc, design = ~ condition)
 MMERVK10C_dds_npc <- DESeq(MMERVK10C_dds_npc)
 MMERVK10C_res_npc <- results(MMERVK10C_dds_npc)
 
+# Subset of upregulated MMERVK10C elements
 MMERVK10C_upreg_npc <- rownames(MMERVK10C_res_npc[which(MMERVK10C_res_npc$log2FoldChange > 0),])
 MMERVK10C_upreg_npc <- MMERVK10C_upreg_npc[which(MMERVK10C_upreg_npc %in% rownames(MMERVK10C_count_npc))]
 write.table(MMERVK10C_count_npc[MMERVK10C_upreg_npc,c('Chr', 'Start', 'End', 'Geneid', 'Strand')], col.names = F, row.names = F, quote = F, sep='\t', file='/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/npc_upreg_MMERVK10C.bed')
-
+# Subset of not upregulated MMERVK10C elements (downregulated and not dysregulated)
+# This is to test if there is a difference in nearby gene expression between the genes close to
+# upregulated MMERVK10C elements and the not dysregulated MMERVK10C
 MMERVK10C_not_upreg_npc <- rownames(MMERVK10C_res_npc[which(!MMERVK10C_res_npc$log2FoldChange > 0 | is.na(MMERVK10C_res_npc$log2FoldChange)),])
 MMERVK10C_not_upreg_npc <- MMERVK10C_not_upreg_npc[which(MMERVK10C_not_upreg_npc %in% rownames(MMERVK10C_res_npc))]
 write.table(MMERVK10C_count_npc[MMERVK10C_not_upreg_npc,c('Chr', 'Start', 'End', 'Geneid', 'Strand')], col.names = F, row.names = F, quote = F, sep='\t', file='/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/npc_notupreg_MMERVK10C.bed')
 
+# Subset quantification of Emx animals
 MMERVK10C_count_emx <- MMERVK10C_count[,c('Chr', 'Start', 'End', 'Geneid', 'Strand', subset(MMERVK10C_coldata, MMERVK10C_coldata$experiment == 'invivo_bd')$sample)]
 MMERVK10C_coldata_emx <- subset(MMERVK10C_coldata, MMERVK10C_coldata$experiment == 'invivo_bd')
-
+# Differential MMERVK10C expression analysis testing for difference in condition in Emx (Trim28 KO vs control)
 MMERVK10C_dds_emx <- DESeqDataSetFromMatrix(MMERVK10C_count_emx[,rownames(MMERVK10C_coldata_emx)], MMERVK10C_coldata_emx, design = ~ condition)
 MMERVK10C_dds_emx <- DESeq(MMERVK10C_dds_emx)
 MMERVK10C_res_emx <- results(MMERVK10C_dds_emx)
 
+# Subset of upregulated MMERVK10C elements
 MMERVK10C_upreg_emx <- rownames(MMERVK10C_res_emx[which(MMERVK10C_res_emx$log2FoldChange > 0),])
 MMERVK10C_upreg_emx <- MMERVK10C_upreg_emx[which(MMERVK10C_upreg_emx %in% rownames(MMERVK10C_count_emx))]
 write.table(MMERVK10C_count_emx[MMERVK10C_upreg_emx,c('Chr', 'Start', 'End', 'Geneid', 'Strand')], col.names = F, row.names = F, quote = F, sep='\t', file='/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/emx_upreg_MMERVK10C.bed')
-
+# Subset of not upregulated MMERVK10C elements (downregulated and not dysregulated)
+# Same idea : This to test if there is a difference in nearby gene expression between the genes close to
+# upregulated MMERVK10C elements and the not dysregulated MMERVK10C
 MMERVK10C_not_upreg_emx <- rownames(MMERVK10C_res_emx[which(!MMERVK10C_res_emx$log2FoldChange > 0 | is.na(MMERVK10C_res_emx$log2FoldChange)),])
 MMERVK10C_not_upreg_emx <- MMERVK10C_not_upreg_emx[which(MMERVK10C_not_upreg_emx %in% rownames(MMERVK10C_res_emx))]
 write.table(MMERVK10C_count_emx[MMERVK10C_not_upreg_emx,c('Chr', 'Start', 'End', 'Geneid', 'Strand')], col.names = F, row.names = F, quote = F, sep='\t', file='/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/emx_notupreg_MMERVK10C.bed')
 
-
 # EMX - MMERVK10C nearby gene expression ----
+# Read intersection of upregulated MMERVK10C elements and genes in 10kb, 25kb and 50kb distance
 emx_upreg10kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/invivo_bd/emx_upreg_MMERVK10C_10kb_windows_intersect_genes.bed', data.table = F, header = F)
 emx_upreg25kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/invivo_bd/emx_upreg_MMERVK10C_25kb_windows_intersect_genes.bed', data.table = F, header = F)
 emx_upreg50kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/invivo_bd/emx_upreg_MMERVK10C_50kb_windows_intersect_genes.bed', data.table = F, header = F)
 
+# Are these genes dysregulated?
 emx_upreg10kb_res <- subset(emx_genes_res, rownames(emx_genes_res) %in% as.character(emx_upreg10kb$V4))
 emx_upreg25kb_res <- subset(emx_genes_res, rownames(emx_genes_res) %in% as.character(emx_upreg25kb$V4))
 emx_upreg50kb_res <- subset(emx_genes_res, rownames(emx_genes_res) %in% as.character(emx_upreg50kb$V4))
-
 emx_nearby_genes_upregMMERVK10C <- data.frame(log2FC=emx_upreg10kb_res[,'log2FoldChange', drop=F], set=rep('10kb', nrow(emx_upreg10kb_res)))
 emx_nearby_genes_upregMMERVK10C <- rbind(emx_nearby_genes_upregMMERVK10C, data.frame(log2FC=emx_upreg25kb_res[,'log2FoldChange', drop=F], set=rep('25kb', nrow(emx_upreg25kb_res))))
 emx_nearby_genes_upregMMERVK10C <- rbind(emx_nearby_genes_upregMMERVK10C, data.frame(log2FC=emx_upreg50kb_res[,'log2FoldChange', drop=F], set=rep('50kb', nrow(emx_upreg50kb_res))))
 emx_nearby_genes_upregMMERVK10C$disregulation <- rep("Upregulated", nrow(emx_nearby_genes_upregMMERVK10C))
 
-# Not upregulated MMERVKs
+# Read intersection of NOT upregulated MMERVK10C elements and genes in 10kb, 25kb and 50kb distance
 emx_notupreg10kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/invivo_bd/emx_notupreg_MMERVK10C_10kb_windows_intersect_genes.bed', data.table = F, header = F)
 emx_notupreg25kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/invivo_bd/emx_notupreg_MMERVK10C_25kb_windows_intersect_genes.bed', data.table = F, header = F)
 emx_notupreg50kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/invivo_bd/emx_notupreg_MMERVK10C_50kb_windows_intersect_genes.bed', data.table = F, header = F)
 
+# Are these genes dysregulated?
 emx_notupreg10kb_res <- subset(emx_genes_res, rownames(emx_genes_res) %in% as.character(emx_notupreg10kb$V4))
 emx_notupreg25kb_res <- subset(emx_genes_res, rownames(emx_genes_res) %in% as.character(emx_notupreg25kb$V4))
 emx_notupreg50kb_res <- subset(emx_genes_res, rownames(emx_genes_res) %in% as.character(emx_notupreg50kb$V4))
-
 emx_nearby_genes_notupregMMERVK10C <- data.frame(log2FC=emx_notupreg10kb_res[,'log2FoldChange', drop=F], set=rep('10kb', nrow(emx_notupreg10kb_res)))
 emx_nearby_genes_notupregMMERVK10C <- rbind(emx_nearby_genes_notupregMMERVK10C, data.frame(log2FC=emx_notupreg25kb_res[,'log2FoldChange', drop=F], set=rep('25kb', nrow(emx_notupreg25kb_res))))
 emx_nearby_genes_notupregMMERVK10C <- rbind(emx_nearby_genes_notupregMMERVK10C, data.frame(log2FC=emx_notupreg50kb_res[,'log2FoldChange', drop=F], set=rep('50kb', nrow(emx_notupreg50kb_res))))
@@ -961,43 +1092,35 @@ emx_nearby_genes_MMERVK10C_plot <- ggplot(emx_nearby_genes_MMERVK10C, aes(y=log2
 ggsave(emx_nearby_genes_MMERVK10C_plot, file='/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/invivo_bd/emx_nearby_gene_MMERVK10C.svg', width=20, height=20, units="cm", dpi=96)
 
 # NPC - MMERVK10C nearby gene expression ----
+# Read intersection of upregulated MMERVK10C elements and genes in 10kb, 25kb and 50kb distance
 npc_upreg10kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/invitro_crispr/npc_upreg_MMERVK10C_10kb_windows_intersect_genes.bed', data.table = F, header = F)
 npc_upreg25kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/invitro_crispr/npc_upreg_MMERVK10C_25kb_windows_intersect_genes.bed', data.table = F, header = F)
 npc_upreg50kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/upregulated/invitro_crispr/npc_upreg_MMERVK10C_50kb_windows_intersect_genes.bed', data.table = F, header = F)
 
+# Are these genes dysregulated?
 npc_upreg10kb_res <- subset(npc_genes_res, rownames(npc_genes_res) %in% as.character(npc_upreg10kb$V4))
 npc_upreg25kb_res <- subset(npc_genes_res, rownames(npc_genes_res) %in% as.character(npc_upreg25kb$V4))
 npc_upreg50kb_res <- subset(npc_genes_res, rownames(npc_genes_res) %in% as.character(npc_upreg50kb$V4))
-
-plotMA(npc_upreg10kb_res, cex=1.5, ylim=c(-4,4))
-plotMA(npc_upreg25kb_res, cex=1.5, ylim=c(-4,4))
-plotMA(npc_upreg50kb_res, cex=1.5, ylim=c(-4,4))
-
+# plotMA(npc_upreg10kb_res, cex=1.5, ylim=c(-4,4))
+# plotMA(npc_upreg25kb_res, cex=1.5, ylim=c(-4,4))
+# plotMA(npc_upreg50kb_res, cex=1.5, ylim=c(-4,4))
 npc_nearby_genes_upregMMERVK10C <- data.frame(log2FC=npc_upreg10kb_res[,'log2FoldChange', drop=F], set=rep('10kb', nrow(npc_upreg10kb_res)))
 npc_nearby_genes_upregMMERVK10C <- rbind(npc_nearby_genes_upregMMERVK10C, data.frame(log2FC=npc_upreg25kb_res[,'log2FoldChange', drop=F], set=rep('25kb', nrow(npc_upreg25kb_res))))
 npc_nearby_genes_upregMMERVK10C <- rbind(npc_nearby_genes_upregMMERVK10C, data.frame(log2FC=npc_upreg50kb_res[,'log2FoldChange', drop=F], set=rep('50kb', nrow(npc_upreg50kb_res))))
 npc_nearby_genes_upregMMERVK10C$disregulation <- rep("Upregulated", nrow(npc_nearby_genes_upregMMERVK10C))
 
-# Not upregulated MMERVKs
+# Read intersection of NOT upregulated MMERVK10C elements and genes in 10kb, 25kb and 50kb distance
 npc_notupreg10kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/invitro_crispr/npc_notupreg_MMERVK10C_10kb_windows_intersect_genes.bed', data.table = F, header = F)
 npc_notupreg25kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/invitro_crispr/npc_notupreg_MMERVK10C_25kb_windows_intersect_genes.bed', data.table = F, header = F)
 npc_notupreg50kb <- fread('/Volumes/Seagate Backup /trim28/09.10.19/10_nearbygenes/not_upregulated/invitro_crispr/npc_notupreg_MMERVK10C_50kb_windows_intersect_genes.bed', data.table = F, header = F)
 
-table(npc_genes_res$padj < 0.05 & npc_genes_res$log2FoldChange > 0.1)
-table(npc_genes_res$padj < 0.05 & npc_genes_res$log2FoldChange < -0.1)
-
-table(emx_genes_res$padj < 0.05 & emx_genes_res$log2FoldChange > 0.1)
-table(emx_genes_res$padj < 0.05 & emx_genes_res$log2FoldChange < -0.1)
-
-
+# Are these genes dysregulated?
 npc_notupreg10kb_res <- subset(npc_genes_res, rownames(npc_genes_res) %in% as.character(npc_notupreg10kb$V4))
 npc_notupreg25kb_res <- subset(npc_genes_res, rownames(npc_genes_res) %in% as.character(npc_notupreg25kb$V4))
 npc_notupreg50kb_res <- subset(npc_genes_res, rownames(npc_genes_res) %in% as.character(npc_notupreg50kb$V4))
-
-plotMA(npc_notupreg10kb_res, cex=1.5, ylim=c(-4,4))
-plotMA(npc_notupreg25kb_res, cex=1.5, ylim=c(-4,4))
-plotMA(npc_notupreg50kb_res, cex=1.5, ylim=c(-4,4))
-
+# plotMA(npc_notupreg10kb_res, cex=1.5, ylim=c(-4,4))
+# plotMA(npc_notupreg25kb_res, cex=1.5, ylim=c(-4,4))
+# plotMA(npc_notupreg50kb_res, cex=1.5, ylim=c(-4,4))
 npc_nearby_genes_notupregMMERVK10C <- data.frame(log2FC=npc_notupreg10kb_res[,'log2FoldChange', drop=F], set=rep('10kb', nrow(npc_notupreg10kb_res)))
 npc_nearby_genes_notupregMMERVK10C <- rbind(npc_nearby_genes_notupregMMERVK10C, data.frame(log2FC=npc_notupreg25kb_res[,'log2FoldChange', drop=F], set=rep('25kb', nrow(npc_notupreg25kb_res))))
 npc_nearby_genes_notupregMMERVK10C <- rbind(npc_nearby_genes_notupregMMERVK10C, data.frame(log2FC=npc_notupreg50kb_res[,'log2FoldChange', drop=F], set=rep('50kb', nrow(npc_notupreg50kb_res))))
