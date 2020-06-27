@@ -39,36 +39,36 @@ coldata_MGlia <- subset(coldata, coldata$cell_type == 'MGlia')
 
 library(DESeq2)
 scTE_default_EX_dds <- DESeqDataSetFromMatrix(scTE_default_EX[,rownames(coldata_EX)], coldata_EX, design = ~ condition)
-scTE_default_EX_dds <- DESeq(scTE_multi_EX_dds)
+scTE_default_EX_dds <- DESeq(scTE_default_EX_dds)
 
 scTE_default_IN_dds <- DESeqDataSetFromMatrix(scTE_default_IN[,rownames(coldata_IN)], coldata_IN, design = ~ condition)
-scTE_default_IN_dds <- DESeq(scTE_multi_IN_dds)
+scTE_default_IN_dds <- DESeq(scTE_default_IN_dds)
 
 scTE_default_MGlia_dds <- DESeqDataSetFromMatrix(scTE_default_MGlia[,rownames(coldata_MGlia)], coldata_MGlia, design = ~ condition)
-scTE_default_MGlia_dds <- DESeq(scTE_multi_MGlia_dds)
+scTE_default_MGlia_dds <- DESeq(scTE_default_MGlia_dds)
 
 scTE_default_Vas_dds <- DESeqDataSetFromMatrix(scTE_default_Vas[,rownames(coldata_Vas)], coldata_Vas, design = ~ condition)
-scTE_default_Vas_dds <- DESeq(scTE_multi_Vas_dds)
+scTE_default_Vas_dds <- DESeq(scTE_default_Vas_dds)
 
 scTE_default_Astro_dds <- DESeqDataSetFromMatrix(scTE_default_Astro[,rownames(coldata_Astro)], coldata_Astro, design = ~ condition)
-scTE_default_Astro_dds <- DESeq(scTE_multi_Astro_dds)
+scTE_default_Astro_dds <- DESeq(scTE_default_Astro_dds)
 
 scTE_default_Oligo_dds <- DESeqDataSetFromMatrix(scTE_default_Oligo[,rownames(coldata_Oligo)], coldata_Oligo, design = ~ condition)
-scTE_default_Oligo_dds <- DESeq(scTE_multi_Oligo_dds)
+scTE_default_Oligo_dds <- DESeq(scTE_default_Oligo_dds)
 
 scTE_default_OligoPre_dds <- DESeqDataSetFromMatrix(scTE_default_OligoPre[,rownames(coldata_OligoPre)], coldata_OligoPre, design = ~ condition)
-scTE_default_OligoPre_dds <- DESeq(scTE_multi_OligoPre_dds)
+scTE_default_OligoPre_dds <- DESeq(scTE_default_OligoPre_dds)
 
 # DEA on TE expression : EX ----
 scTE_multi_EX <- scTE_multi[which(!startsWith(rownames(scTE_multi), 'ENS')),subset(coldata, coldata$cell_type == 'EX')$sample]
-scTE_multi_EX <- scTE_multi_EX[which(rowSums(scTE_multi_EX[,coldata_ex$sample]) > 0),]
+scTE_multi_EX <- scTE_multi_EX[which(rowSums(scTE_multi_EX[,coldata_EX$sample]) > 0),]
 scTE_multi_EX$TE_subfamily <- sapply(str_split(rownames(scTE_multi_EX), ":"), `[[`, 1)
 scTE_multi_EX$TE_family <- sapply(str_split(rownames(scTE_multi_EX), ":"), `[[`, 2)
 scTE_multi_EX$TE_class <- sapply(str_split(rownames(scTE_multi_EX), ":"), `[[`, 3)
 scTE_multi_EX <- scTE_multi_EX[which(scTE_multi_EX$TE_class %in% c('LINE', 'SINE', 'LTR', 'Retroposon')),]
-scTE_multi_EX <- scTE_multi_EX[,coldata_ex$sample]
+scTE_multi_EX <- scTE_multi_EX[,coldata_EX$sample]
 
-scTE_multi_EX_dds <- DESeqDataSetFromMatrix(scTE_multi_EX[,rownames(coldata_ex)], coldata_ex, design = ~ condition)
+scTE_multi_EX_dds <- DESeqDataSetFromMatrix(scTE_multi_EX[,rownames(coldata_EX)], coldata_EX, design = ~ condition)
 scTE_multi_EX_dds <- DESeq(scTE_multi_EX_dds)
 scTE_multi_EX_res <- results(scTE_multi_EX_dds)
 scTE_multi_EX_res_df <- as.data.frame(scTE_multi_EX_res)
@@ -324,8 +324,9 @@ produce_mean_plot <- function(counts, dds, res_df, coldata, celltype, filename){
   counts_norm <- counts
   counts_norm[] <- mapply('/', counts_norm[,names(dds$sizeFactor)], dds$sizeFactor)
   res_df$FoldChange <- 2^(res_df$log2FoldChange)
-  counts_norm$colours <- ifelse(rownames(counts_norm) %in% rownames(res_df[which(res_df$padj < 0.01 & res_df$log2FoldChange > 3),]), 'firebrick2', ifelse(rownames(counts_norm) %in% rownames(res_df[which(res_df$padj < 0.01 & res_df$log2FoldChange < -3),]), 'steelblue', 'black'))
-  counts_norm$cexs <- ifelse(rownames(counts_norm) %in% rownames(res_df[which(res_df$padj < 0.01 & abs(res_df$log2FoldChange) > 3),]), 1, 0.6)
+  counts_norm$type <- ifelse(rownames(counts_norm) %in% rownames(res_df[which(res_df$padj < 0.01 & res_df$log2FoldChange > 3),]), 'Upregulated', ifelse(rownames(counts_norm) %in% rownames(res_df[which(res_df$padj < 0.01 & res_df$log2FoldChange < -3),]), 'Downregulated', 'Not significant'))
+  counts_norm$colours <- ifelse(counts_norm$type == 'Upregulated', 'firebrick2', ifelse(counts_norm$type == 'Downregulated', 'steelblue', 'black'))
+  counts_norm$cexs <- ifelse(counts_norm$type != 'Not significant', 1, 0.6)
   
   signdiff <- res_df[rownames(res_df[which(res_df$padj < 0.01 & res_df$log2FoldChange > 3),]), 'FoldChange', drop=F]
   signdiff$TE_id <- sapply(str_split(rownames(signdiff), ':'), `[[`, 1)
@@ -344,16 +345,25 @@ produce_mean_plot <- function(counts, dds, res_df, coldata, celltype, filename){
        xlab = 'log2(mean Control expression)',
        ylab = 'log2(mean KO expression)',
        pch=16, cex=counts_norm$cexs,
-       col = counts_norm$colours, main=celltype, xlim=c(0,20), ylim=c(0,20))
-  dev.off()
+       col = counts_norm$colours, main=celltype, xlim=c(-1,20), ylim=c(-1,20))
   
+  legend("bottomright", legend = c(paste("up (",as.numeric(table(counts_norm$type)["Upregulated"]),")",sep=""),
+                                   paste("down (",as.numeric(table(counts_norm$type)["Downregulated"]),")",sep = ""),
+                                   paste("not significant (",as.numeric(table(counts_norm$type)["Not significant"]),")",sep = "")),
+         pch=16,col=c("firebrick3","steelblue","black"),cex=1)
+  dev.off()
+  # text(log2(rowMeans(counts_norm[,subset(coldata, coldata$condition == 'Ctl')$sample])+0.5),
+  #      log2(rowMeans(counts_norm[,subset(coldata, coldata$condition == 'KO')$sample])+0.5),
+  #      labels=counts_norm$labels, cex= 0.7, pos=3)
+  # 
+  # counts_norm$labels <- ifelse(counts_norm$type == 'Upregulated', rownames(counts_norm), "")
   return(signdiff)
 }
 
-EX_signdiff <- produce_mean_plot(scTE_multi_EX, scTE_default_EX_dds, scTE_multi_EX_res_df, coldata_EX, 'Excitatory neurons', '/Volumes/Seagate Backup /scTE/May2020/3_multimapping/plots/meanplots/EX_')
+EX_signdiff <- produce_mean_plot(counts=scTE_multi_EX, dds=scTE_default_EX_dds, res_df=scTE_multi_EX_res_df, coldata=coldata_EX, celltype = 'Excitatory neurons', filename='/Volumes/Seagate Backup /scTE/May2020/3_multimapping/plots/meanplots/EX_')
 IN_signdiff <- produce_mean_plot(scTE_multi_IN, scTE_default_IN_dds, scTE_multi_IN_res_df, coldata_IN, 'Inhibitory neurons', '/Volumes/Seagate Backup /scTE/May2020/3_multimapping/plots/meanplots/IN_')
 Astro_signdiff <- produce_mean_plot(scTE_multi_Astro, scTE_default_Astro_dds, scTE_multi_Astro_res_df, coldata_Astro, 'Astrocytes', '/Volumes/Seagate Backup /scTE/May2020/3_multimapping/plots/meanplots/Astro_')
-Oligo_signdiff <- produce_mean_plot(scTE_multi_Oligo, scTE_default_Oligo_dds, scTE_multi_Oligo_res_df, coldata_Oligo, 'Oligodendrocytes', '/Volumes/Seagate Backup /scTE/May2020/3_multimapping/plots/meanplots/Oligo_')
+Oligo_signdiff <- produce_mean_plot(counts=scTE_multi_Oligo, dds=scTE_default_Oligo_dds, res_df=scTE_multi_Oligo_res_df, coldata=coldata_Oligo, celltype = 'Oligodendrocytes', filename = '/Volumes/Seagate Backup /scTE/May2020/3_multimapping/plots/meanplots/Oligo_')
 OligoPre_signdiff <- produce_mean_plot(scTE_multi_OligoPre, scTE_default_OligoPre_dds, scTE_multi_OligoPre_res_df, coldata_OligoPre, 'Oligodendrocyte precursors', '/Volumes/Seagate Backup /scTE/May2020/3_multimapping/plots/meanplots/OligoPre_')
 MGlia_signdiff <- produce_mean_plot(scTE_multi_MGlia, scTE_default_MGlia_dds, scTE_multi_MGlia_res_df, coldata_MGlia, 'Microglia', '/Volumes/Seagate Backup /scTE/May2020/3_multimapping/plots/meanplots/MGlia_')
 Vas_signdiff <- produce_mean_plot(scTE_multi_Vas, scTE_default_Vas_dds, scTE_multi_Vas_res_df, coldata_Vas, 'Vascular', '/Volumes/Seagate Backup /scTE/May2020/3_multimapping/plots/meanplots/Vas_')
