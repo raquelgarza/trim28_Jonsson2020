@@ -1,0 +1,627 @@
+{
+    "__default__" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "00:15:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 5,
+        "partition" : "dell",
+        "o" : "%j.out",
+        "e" : "%j.err",
+        "J" : "%j"
+    },
+    "TE_chipseq" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.TE_chipseq.out",
+        "e" : "%j.TE_chipseq.err",
+        "J" : "%j.TE_chipseq"
+    },
+    "TEpeaks" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.TEpeaks.out",
+        "e" : "%j.TEpeaks.err",
+        "J" : "%j.TEpeaks"
+    },
+    "bam_bigwig_Compare_cut_n_run" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "02:00:00",
+        "N" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.bam_bigwig_Compare_cut_n_run.out",
+        "e" : "%j.bam_bigwig_Compare_cut_n_run.err",
+        "J" : "%j.bam_bigwig_Compare_cut_n_run"
+    },
+    "bamCompare_subtract_kap1" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "02:00:00",
+        "N" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.bamCompare.out",
+        "e" : "%j.bamCompare.err",
+        "J" : "%j.bamCompare"
+    },
+    "bamCompare_mean" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "02:00:00",
+        "N" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.bamCompare.out",
+        "e" : "%j.bamCompare.err",
+        "J" : "%j.bamCompare"
+    },
+    "computeMatrix_MMERVK10C_invitro_crispr" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.computeMatrix_MMERVK10C.out",
+        "e" : "%j.computeMatrix_MMERVK10C.err",
+        "J" : "%j.computeMatrix_MMERVK10C"
+    },
+    "featureCounts_MMERVK10C_invitro_crispr" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.featureCounts_MMERVK10C_invitro_crispr.out",
+        "e" : "%j.featureCounts_MMERVK10C_invitro_crispr.err",
+        "J" : "%j.featureCounts_MMERVK10C_invitro_crispr"
+    },
+    "featureCounts_fullMMERVK10C" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.featureCounts_fullMMERVK10C.out",
+        "e" : "%j.featureCounts_fullMMERVK10C.err",
+        "J" : "%j.featureCounts_fullMMERVK10C"
+    },
+    "featureCounts_ERVK" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.featureCounts_ERVK.out",
+        "e" : "%j.featureCounts_ERVK.err",
+        "J" : "%j.featureCounts_ERVK"
+    },
+    "featureCounts_MMERVK10C_transcript_invitro_crispr" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.featureCounts_MMERVK10C_invitro_crispr.out",
+        "e" : "%j.featureCounts_MMERVK10C_invitro_crispr.err",
+        "J" : "%j.featureCounts_MMERVK10C_invitro_crispr"
+    },
+    "mapping" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "02:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.map.out",
+        "e" : "%j.map.err",
+        "J" : "%j.map"
+    },
+    "mapping_bt" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "04:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.map.out",
+        "e" : "%j.map.err",
+        "J" : "%j.map"
+    },
+    "mapping_bt_kap1":
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "04:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.map.out",
+        "e" : "%j.map.err",
+        "J" : "%j.map"
+    },
+    "sam_filtering" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "04:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.sam_filtering.out",
+        "e" : "%j.sam_filtering.err",
+        "J" : "%j.sam_filtering"
+    },
+    "samToBam" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "04:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.samToBam.out",
+        "e" : "%j.samToBam.err",
+        "J" : "%j.samToBam"
+    },
+    "BamToBw" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "04:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.BamToBw.out",
+        "e" : "%j.BamToBw.err",
+        "J" : "%j.BamToBw"
+    },
+    "bam_to_sam" :
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "01:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+      	"partition" : "dell",
+      	"o" : "%j.bam_to_sam.out",
+      	"e" : "%j.bam_to_sam.err",
+      	"J" : "%j.bam_to_sam"
+    },
+    "bam_to_bed" :
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "01:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+      	"partition" : "dell",
+      	"o" : "%j.bam_to_bed.out",
+      	"e" : "%j.bam_to_bed.err",
+      	"J" : "%j.bam_to_bed"
+    },
+    "sorting" :
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "05:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+      	"partition" : "dell",
+      	"o" : "%j.sorting.out",
+      	"e" : "%j.sorting.err",
+      	"J" : "%j.sort"
+    },
+    "indexing" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "01:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.indexing.out",
+        "e" : "%j.indexing.err",
+        "J" : "%j.indexing"
+    },
+    "indexing_chipseq" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "01:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.indexing.out",
+        "e" : "%j.indexing.err",
+        "J" : "%j.indexing"
+    },
+    "bigwig" :
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "01:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+      	"partition" : "dell",
+      	"o" : "%j.bigwig.out",
+      	"e" : "%j.bigwig.err",
+      	"J" : "%j.bigwig"
+    },
+    "bigwig_chipseq" :
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "01:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+      	"partition" : "dell",
+      	"o" : "%j.bigwig.out",
+      	"e" : "%j.bigwig.err",
+      	"J" : "%j.bigwig"
+    },
+    "mm10_guided_assembly" :
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "01:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 20,
+      	"partition" : "dell",
+      	"o" : "%j.assembly1.out",
+      	"e" : "%j.assembly1.err",
+      	"J" : "%j.assembly1"
+    },
+    "mm10_guided_merging" :
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "01:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+      	"partition" : "dell",
+      	"o" : "%j.merging.out",
+      	"e" : "%j.merging.err",
+      	"J" : "%j.merging"
+    },
+    "mergedsamples_guided_assembly" :
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "01:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 20,
+      	"partition" : "dell",
+      	"o" : "%j.assembly2.out",
+      	"e" : "%j.assembly2.err",
+      	"J" : "%j.assembly2"
+    },
+    "readcounts_matrices" :
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "01:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+      	"partition" : "dell",
+      	"o" : "%j.readcount.out",
+      	"e" : "%j.readcount.err",
+      	"J" : "%j.readcount"
+    },
+    "merged_samples_bed" :
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "01:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 5,
+      	"partition" : "dell",
+      	"o" : "%j.mergedbed.out",
+      	"e" : "%j.mergedbed.err",
+      	"J" : "%j.mergedbed"
+    },
+    "intersect_transposons" :
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "01:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 20,
+      	"partition" : "dell",
+      	"o" : "%j.intersect.out",
+      	"e" : "%j.intersect.err",
+      	"J" : "%j.intersect"
+    },
+    "getting_TEderived_readcount" :
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "01:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 20,
+      	"partition" : "dell",
+      	"o" : "%j.TEreadcount.out",
+      	"e" : "%j.TEreadcount.err",
+      	"J" : "%j.TEreadcount"
+    },
+    "featureCounts_TEs":
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "02:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 20,
+      	"partition" : "dell",
+      	"o" : "%j.featureCounts_TEs.out",
+      	"e" : "%j.featureCounts_TEs.err",
+      	"J" : "%j.featureCounts_TEs"
+    },
+    "featureCounts_transc":
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "02:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 20,
+      	"partition" : "dell",
+      	"o" : "%j.featureCounts_transc.out",
+      	"e" : "%j.featureCounts_transc.err",
+      	"J" : "%j.featureCounts_transc"
+    },
+    "featureCounts_TEs_antisense":
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "02:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 20,
+      	"partition" : "dell",
+      	"o" : "%j.featureCounts_TEs_antisense.out",
+      	"e" : "%j.featureCounts_TEs_antisense.err",
+      	"J" : "%j.featureCounts_TEs_antisense"
+    },
+    "multimapping" :
+    {
+      	"account" : "lsens2018-3-3",
+      	"time" : "01:00:00",
+      	"N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 20,
+      	"partition" : "dell",
+      	"o" : "%j.multimapping.out",
+      	"e" : "%j.multimapping.err",
+      	"J" : "%j.multimapping"
+    },
+    "multimap_sorting" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "01:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.multimap_sorting.out",
+        "e" : "%j.multimap_sorting.err",
+        "J" : "%j.multimap_sorting"
+    },
+    "multimap_indexing" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "01:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.multimap_indexing.out",
+        "e" : "%j.multimap_indexing.err",
+        "J" : "%j.multimap_indexing"
+    },
+    "multimap_bigwig" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "01:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.multimap_bigwig.out",
+        "e" : "%j.multimap_bigwig.err",
+        "J" : "%j.multimap_bigwig"
+    },
+    "TEtranscripts_invivo_adult" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.TEtranscripts_invivo_adult.out",
+        "e" : "%j.TEtranscripts_invivo_adult.err",
+        "J" : "%j.TEtranscripts_invivo_adult"
+    },
+    "TEtranscripts_invivo_braindev" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.TEtranscripts_invivo_braindev.out",
+        "e" : "%j.TEtranscripts_invivo_braindev.err",
+        "J" : "%j.TEtranscripts_invivo_braindev"
+    },
+    "TEtranscripts_invitro_crispr_g3" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.TEtranscripts_invitro_crispr_g3.out",
+        "e" : "%j.TEtranscripts_invitro_crispr_g3.err",
+        "J" : "%j.TEtranscripts_invitro_crispr_g3"
+    },
+    "TEtranscripts_invitro_crispr_g4" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.TEtranscripts_invitro_crispr_g4.out",
+        "e" : "%j.TEtranscripts_invitro_crispr_g4.err",
+        "J" : "%j.TEtranscripts_invitro_crispr_g4"
+    },
+    "TEtranscripts_invitro_crispr_g13" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.TEtranscripts_invitro_crispr_g13.out",
+        "e" : "%j.TEtranscripts_invitro_crispr_g13.err",
+        "J" : "%j.TEtranscripts_invitro_crispr_g13"
+    },
+    "TEtranscripts_invivo_crispr_g3" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.TEtranscripts_invivo_crispr_g3.out",
+        "e" : "%j.TEtranscripts_invivo_crispr_g3.err",
+        "J" : "%j.TEtranscripts_invivo_crispr_g3"
+    },
+    "TEtranscripts_invivo_crispr_g4" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.TEtranscripts_invivo_crispr_g4.out",
+        "e" : "%j.TEtranscripts_invivo_crispr_g4.err",
+        "J" : "%j.TEtranscripts_invivo_crispr_g4"
+    },
+    "TEtranscripts_invivo_crispr_g13" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.TEtranscripts_invivo_crispr_g13.out",
+        "e" : "%j.TEtranscripts_invivo_crispr_g13.err",
+        "J" : "%j.TEtranscripts_invivo_crispr_g13"
+    },
+    "TEtranscripts_invivo_crispr_g3g4g13" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.TEtranscripts_invivo_crispr_g3g4g13.out",
+        "e" : "%j.TEtranscripts_invivo_crispr_g3g4g13.err",
+        "J" : "%j.TEtranscripts_invivo_crispr_g3g4g13"
+    },
+    "TEtranscripts_invitro_crispr" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.TEtranscripts_invitro_crispr.out",
+        "e" : "%j.TEtranscripts_invitro_crispr.err",
+        "J" : "%j.TEtranscripts_invitro_crispr"
+    },
+    "TEtranscripts_invivo_crispr" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.TEtranscripts_invivo_crispr.out",
+        "e" : "%j.TEtranscripts_invivo_crispr.err",
+        "J" : "%j.TEtranscripts_invivo_crispr"
+    },
+    "peak_call_wt" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "tasks-per-node" : 20,
+        "partition" : "dell",
+        "o" : "%j.peakcall_wt.out",
+        "e" : "%j.peakcall_wt.err",
+        "J" : "%j.peakcall_wt"
+    },
+    "peak_call_ko" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.peakcall_ko.out",
+        "e" : "%j.peakcall_ko.err",
+        "J" : "%j.peakcall_ko"
+    },
+    "plotHeatmap_invitro_crispr_MMERVK10Cint_combined_means" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.plotHeatmap.out",
+        "e" : "%j.plotHeatmap.err",
+        "J" : "%j.plotHeatmap"
+    },
+    "plotProfile_invitro_crispr_MMERVK10Cint_combined_means" :
+    {
+        "account" : "lsens2018-3-3",
+        "time" : "10:00:00",
+        "N" : 1,
+        "n" : 1,
+        "tasks-per-node" : 10,
+        "partition" : "dell",
+        "o" : "%j.plotProfile.out",
+        "e" : "%j.plotProfile.err",
+        "J" : "%j.plotProfile"
+    }
+}

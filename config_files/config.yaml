@@ -1,0 +1,236 @@
+samples:
+- invivo_adult/ko/794/794
+- invivo_adult/ko/795/795
+- invivo_adult/ko/796/796
+- invivo_adult/ko/823/823
+- invivo_adult/ctrl/797/797
+- invivo_adult/ctrl/798/798
+- invivo_adult/ctrl/799/799
+- invivo_adult/ctrl/822/822
+- invivo_bd/ko/60ctx2/60ctx2
+- invivo_bd/ko/73ctx2/73ctx2
+- invivo_bd/ko/76ctx2/76ctx2
+- invivo_bd/ctrl/64ctx2/64ctx2
+- invivo_bd/ctrl/65ctx2/65ctx2
+- invivo_bd/ctrl/77ctx2/77ctx2
+- invitro_crispr/ko/g3/845/845
+- invitro_crispr/ko/g4/848/848
+- invitro_crispr/ko/g13/851/851
+- invitro_crispr/ko/g3/870/870
+- invitro_crispr/ko/g4/873/873
+- invitro_crispr/ko/g13/876/876
+- invitro_crispr/ctrl/ctrl/842/842
+- invitro_crispr/ctrl/ctrl/867/867
+- invivo_crispr/ko/cas_g3/cas_g3
+- invivo_crispr/ko/cas_g4/cas_g4
+- invivo_crispr/ko/cas_g13/cas_g13
+- invivo_crispr/ko/cas_g3g4g13/cas_g3g4g13
+- invivo_crispr/ctrl/cas_ctrl/cas_ctrl
+- invivo_crispr/ko/flexcas_g3/flexcas_g3
+- invivo_crispr/ko/flexcas_g4/flexcas_g4
+- invivo_crispr/ko/flexcas_g13/flexcas_g13
+- invivo_crispr/ko/flexcas_g3g4g13/flexcas_g3g4g13
+- invivo_crispr/ctrl/flexcas_ctrl/flexcas_ctrl
+# INVIVO ADULT COMPLETE KO
+invivo_adult_ko:
+- invivo_adult/ko/794/794
+- invivo_adult/ko/795/795
+- invivo_adult/ko/796/796
+- invivo_adult/ko/823/823
+invivo_adult_ctrl:
+- invivo_adult/ctrl/797/797
+- invivo_adult/ctrl/798/798
+- invivo_adult/ctrl/799/799
+- invivo_adult/ctrl/822/822
+# INVIVO BRAIN DEVELOPMENT COMPLETE KO
+invivo_bd_ko:
+- invivo_bd/ko/60ctx2/60ctx2
+- invivo_bd/ko/73ctx2/73ctx2
+- invivo_bd/ko/76ctx2/76ctx2
+invivo_bd_ctrl:
+- invivo_bd/ctrl/64ctx2/64ctx2
+- invivo_bd/ctrl/65ctx2/65ctx2
+- invivo_bd/ctrl/77ctx2/77ctx2
+invivo_bd:
+- invivo_bd/ko/60ctx2/60ctx2
+- invivo_bd/ko/73ctx2/73ctx2
+- invivo_bd/ko/76ctx2/76ctx2
+- invivo_bd/ctrl/64ctx2/64ctx2
+- invivo_bd/ctrl/65ctx2/65ctx2
+- invivo_bd/ctrl/77ctx2/77ctx2
+# INVITRO CRISPR
+invitro_crispr:
+- invitro_crispr/ko/g3/845/845
+- invitro_crispr/ko/g4/848/848
+- invitro_crispr/ko/g13/851/851
+- invitro_crispr/ko/g3/870/870
+- invitro_crispr/ko/g4/873/873
+- invitro_crispr/ko/g13/876/876
+- invitro_crispr/ctrl/ctrl/842/842
+- invitro_crispr/ctrl/ctrl/867/867
+invitro_crispr_ko:
+- invitro_crispr/ko/g3/845/845
+- invitro_crispr/ko/g4/848/848
+- invitro_crispr/ko/g13/851/851
+- invitro_crispr/ko/g3/870/870
+- invitro_crispr/ko/g4/873/873
+- invitro_crispr/ko/g13/876/876
+invitro_crispr_ko_g3:
+- invitro_crispr/ko/g3/870/870
+- invitro_crispr/ko/g3/845/845
+invitro_crispr_ko_g4:
+- invitro_crispr/ko/g4/848/848
+- invitro_crispr/ko/g4/873/873
+invitro_crispr_ko_g13:
+- invitro_crispr/ko/g13/851/851
+- invitro_crispr/ko/g13/876/876
+invitro_crispr_ctrl:
+- invitro_crispr/ctrl/ctrl/842/842
+- invitro_crispr/ctrl/ctrl/867/867
+# INVIVO CRISPR FLEXCAS AND CAS
+invivo_crispr_ko:
+- invivo_crispr/ko/cas_g3/cas_g3
+- invivo_crispr/ko/cas_g4/cas_g4
+- invivo_crispr/ko/cas_g13/cas_g13
+- invivo_crispr/ko/cas_g3g4g13/cas_g3g4g13
+- invivo_crispr/ko/flexcas_g3/flexcas_g3
+- invivo_crispr/ko/flexcas_g4/flexcas_g4
+- invivo_crispr/ko/flexcas_g13/flexcas_g13
+- invivo_crispr/ko/flexcas_g3g4g13/flexcas_g3g4g13
+invivo_crispr_ko_g3:
+- invivo_crispr/ko/cas_g3/cas_g3
+- invivo_crispr/ko/flexcas_g3/flexcas_g3
+invivo_crispr_ko_g4:
+- invivo_crispr/ko/cas_g4/cas_g4
+- invivo_crispr/ko/flexcas_g4/flexcas_g4
+invivo_crispr_ko_g13:
+- invivo_crispr/ko/cas_g13/cas_g13
+- invivo_crispr/ko/flexcas_g13/flexcas_g13
+invivo_crispr_ko_g3g4g13:
+- invivo_crispr/ko/cas_g3g4g13/cas_g3g4g13
+- invivo_crispr/ko/flexcas_g3g4g13/flexcas_g3g4g13
+invivo_crispr_ctrl:
+- invivo_crispr/ctrl/cas_ctrl/cas_ctrl
+- invivo_crispr/ctrl/flexcas_ctrl/flexcas_ctrl
+
+# INVIVO CRISPR CAS
+invivo_crispr_cas_ko:
+- invivo_crispr/ko/cas_g3/cas_g3
+- invivo_crispr/ko/cas_g4/cas_g4
+- invivo_crispr/ko/cas_g13/cas_g13
+- invivo_crispr/ko/cas_g3g4g13/cas_g3g4g13
+invivo_crispr_cas_ko_g3:
+- invivo_crispr/ko/cas_g3/cas_g3
+invivo_crispr_cas_ko_g4:
+- invivo_crispr/ko/cas_g4/cas_g4
+invivo_crispr_cas_ko_g13:
+- invivo_crispr/ko/cas_g13/cas_g13
+invivo_crispr_cas_ko_g3g4g13:
+- invivo_crispr/ko/cas_g3g4g13/cas_g3g4g13
+invivo_crispr_cas_ctrl:
+- invivo_crispr/ctrl/cas_ctrl/cas_ctrl
+# INVIVO CRISPR FLEXCAS
+invivo_crispr_flexcas_ko:
+- invivo_crispr/ko/flexcas_g3/flexcas_g3
+- invivo_crispr/ko/flexcas_g4/flexcas_g4
+- invivo_crispr/ko/flexcas_g13/flexcas_g13
+- invivo_crispr/ko/flexcas_g3g4g13/flexcas_g3g4g13
+invivo_crispr_flexcas_ko_g3:
+- invivo_crispr/ko/flexcas_g3/flexcas_g3
+invivo_crispr_flexcas_ko_g4:
+- invivo_crispr/ko/flexcas_g4/flexcas_g4
+invivo_crispr_flexcas_ko_g13:
+- invivo_crispr/ko/flexcas_g13/flexcas_g13
+invivo_crispr_flexcas_ko_g3g4g13:
+- invivo_crispr/ko/flexcas_g3g4g13/flexcas_g3g4g13
+invivo_crispr_flexcas_ctrl:
+- invivo_crispr/ctrl/flexcas_ctrl/flexcas_ctrl
+samples_str:
+- invivo_adult/ko/794/794
+- invivo_adult/ko/795/795
+- invivo_adult/ko/796/796
+- invivo_adult/ko/823/823
+- invivo_adult/ctrl/797/797
+- invivo_adult/ctrl/798/798
+- invivo_adult/ctrl/799/799
+- invivo_adult/ctrl/822/822
+- invivo_bd/ko/60ctx2/60ctx2
+- invivo_bd/ko/73ctx2/73ctx2
+- invivo_bd/ko/76ctx2/76ctx2
+- invivo_bd/ctrl/64ctx2/64ctx2
+- invivo_bd/ctrl/65ctx2/65ctx2
+- invivo_bd/ctrl/77ctx2/77ctx2
+- invivo_bd/str/60str2/60str2
+- invivo_bd/str/64str2/64str2
+- invivo_bd/str/65str2/65str2
+- invivo_bd/str/73str2/73str2
+- invivo_bd/str/76str1-2/76str1-2
+- invivo_bd/str/77str2/77str2
+- invitro_crispr/ko/g3/845/845
+- invitro_crispr/ko/g4/848/848
+- invitro_crispr/ko/g13/851/851
+- invitro_crispr/ko/g3/870/870
+- invitro_crispr/ko/g4/873/873
+- invitro_crispr/ko/g13/876/876
+- invitro_crispr/ctrl/ctrl/842/842
+- invitro_crispr/ctrl/ctrl/867/867
+- invivo_crispr/ko/cas_g3/cas_g3
+- invivo_crispr/ko/cas_g4/cas_g4
+- invivo_crispr/ko/cas_g13/cas_g13
+- invivo_crispr/ko/cas_g3g4g13/cas_g3g4g13
+- invivo_crispr/ctrl/cas_ctrl/cas_ctrl
+- invivo_crispr/ko/flexcas_g3/flexcas_g3
+- invivo_crispr/ko/flexcas_g4/flexcas_g4
+- invivo_crispr/ko/flexcas_g13/flexcas_g13
+- invivo_crispr/ko/flexcas_g3g4g13/flexcas_g3g4g13
+- invivo_crispr/ctrl/flexcas_ctrl/flexcas_ctrl
+chipseq:
+- CR020_S9
+- CR021_S10
+- CR045_S2
+- CR044_S1
+- kap1_chip1
+- kap1_chip2
+- kap1_input
+- GSM2643042
+- GSM2643045
+- GSM2643047
+cut_n_run:
+- CR020_S9
+- CR021_S10
+- CR045_S2
+- CR044_S1
+kap1:
+- kap1_chip1
+- kap1_chip2
+- kap1_input
+adult_wt:
+- GSM2643042
+- GSM2643045
+- GSM2643047
+cut_n_run_location:
+- CR020_S9/CR020_S9
+- CR021_S10/CR021_S10
+- CR045_S2/CR045_S2
+- CR044_S1/CR044_S1
+chipseq_location:
+- wt/GSM2643042
+- wt/GSM2643045
+- wt/GSM2643047
+cut_n_run_location_wo_inputs:
+- cut_n_run/CR021_S10/CR021_S10
+- cut_n_run/CR045_S2/CR045_S2
+cut_n_run_location_inputs:
+- cut_n_run/CR020_S9/CR020_S9
+- cut_n_run/CR044_S1/CR044_S1
+kap1_chip_location_wo_input:
+- kap1_chip/kap1_chip1/kap1_chip1
+- kap1_chip/kap1_chip2/kap1_chip2
+kap1_chip_location_input:
+- kap1_chip/kap1_input/kap1_input
+adult_wt_location_wo_input:
+- h3k9me3/wt/GSM2643042
+- h3k9me3/wt/GSM2643045
+- h3k9me3/wt/GSM2643047
+adult_wt_location_input:
+- h3k9me3/wt/GSM2643048
