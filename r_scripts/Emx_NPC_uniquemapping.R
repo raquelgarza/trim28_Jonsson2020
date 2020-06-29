@@ -92,7 +92,7 @@ colnames(transcript_gene) <- c('transcript_id', 'gene_id', 'gene_name', 'gene_ty
 # NPC ----
 # Read unique mapping quantification of TEs (repeatmasker)
 npc_TE <- fread('/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/2_readcount/TE_count_matrix_2.csv', data.table = F)
-npc_TE <- npc_TE[,colnames(npc_TE)[c(1, (which(sapply(strsplit(colnames(npc_TE)[7:ncol(npc_TE)], '/'), `[[`, 3) == 'invitro_crispr')+6))]]
+npc_TE <- npc_TE[,colnames(npc_TE)[c(1, (which(sapply(strsplit(colnames(npc_TE)[7:ncol(npc_TE)], '/'), `[[`, 3) == 'npc')+6))]]
 
 colnames(npc_TE)[2:ncol(npc_TE)] <- paste(sapply(strsplit(colnames(npc_TE)[2:ncol(npc_TE)], '/'), `[[`, 4), unlist(lapply(strsplit(colnames(npc_TE)[2:ncol(npc_TE)], '/'), `[[`, 5)), sapply(strsplit(colnames(npc_TE)[2:ncol(npc_TE)], '/'), `[[`, 6), sep='_')
 colnames(npc_TE)[1] <- 'TE_id'
@@ -114,16 +114,16 @@ npc_TE_vst <- varianceStabilizingTransformation(npc_TE_dds)
 
 # Plot PCA based on TE expression
 npc_TE_pca <- plotPCA(npc_TE_vst) + theme_classic() + ggtitle("PCA - In vitro CRISPR TE expression")
-ggsave(npc_TE_pca, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/invitro_crispr/plots/TE_pca.svg", width=20, height=20, units="cm", dpi=96)
+ggsave(npc_TE_pca, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/npc/plots/TE_pca.svg", width=20, height=20, units="cm", dpi=96)
 
 # Mean plot of individual elements
 p_TE_meanplot_npc <- meanPlot_cus(npc_TE_exp$Mean, test=npc_TE_res, l=0.5, p=0.05, c1='ko', c2='ctrl',ttl='', repel = F) + labs(title="", subtitle="")
-ggsave(p_TE_meanplot_npc, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/invitro_crispr/plots/TE_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=320)
-ggsave(p_TE_meanplot_npc, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/invitro_crispr/plots/TE_meanplot_0.5_npc.png", dpi=320)
+ggsave(p_TE_meanplot_npc, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/npc/plots/TE_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=320)
+ggsave(p_TE_meanplot_npc, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/npc/plots/TE_meanplot_0.5_npc.png", dpi=320)
 
 # Read gene expression based on unique mapping 
 npc_gene <- fread('/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/2_readcount/gene_count_matrix_2.csv', data.table = F)
-npc_gene <- npc_gene[,colnames(npc_gene)[c(1, (which(sapply(strsplit(colnames(npc_gene)[7:ncol(npc_gene)], '/'), `[[`, 3) == 'invitro_crispr')+6))]]
+npc_gene <- npc_gene[,colnames(npc_gene)[c(1, (which(sapply(strsplit(colnames(npc_gene)[7:ncol(npc_gene)], '/'), `[[`, 3) == 'npc')+6))]]
 
 colnames(npc_gene)[2:ncol(npc_gene)] <- paste(sapply(strsplit(colnames(npc_gene)[2:ncol(npc_gene)], '/'), `[[`, 4), unlist(lapply(strsplit(colnames(npc_gene)[2:ncol(npc_gene)], '/'), `[[`, 5)), sapply(strsplit(colnames(npc_gene)[2:ncol(npc_gene)], '/'), `[[`, 6), sep='_')
 colnames(npc_gene)[1] <- 'gene_id'
@@ -140,16 +140,16 @@ npc_gene_exp <- getAverage(npc_gene_dds)
 npc_gene_dds_protein <- npc_gene_dds[rownames(npc_gene_dds) %in% unique(subset(transcript_gene, transcript_gene$gene_type == 'protein_coding')$gene_id),]
 npc_gene_vst_protein <- varianceStabilizingTransformation(npc_gene_dds_protein)
 npc_gene_pca_protein <- plotPCA(npc_gene_vst_protein) + theme_classic() + ggtitle("PCA - In vitro CRISPR gene expression")
-ggsave(npc_gene_pca_protein, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/invitro_crispr/plots/gene_pca_protein.svg", width=20, height=20, units="cm", dpi=96)
+ggsave(npc_gene_pca_protein, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/npc/plots/gene_pca_protein.svg", width=20, height=20, units="cm", dpi=96)
 
 # Mean plot of gene expression
 p_gene_meanplot_npc <- meanPlot_cus(npc_gene_exp$Mean, test=npc_gene_res, p=0.05, c1='ko', c2='ctrl',ttl='', repel = F, l=0.5)  + labs(title="", subtitle="")
-ggsave(p_gene_meanplot_npc, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/invitro_crispr/plots/gene_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
+ggsave(p_gene_meanplot_npc, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/npc/plots/gene_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=96)
 
 # Emx ----
 # Read unique mapping quantification of TEs (repeatmasker)
 emx_TE <- fread('/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/2_readcount/TE_count_matrix_2.csv', data.table = F)
-emx_TE <- emx_TE[,colnames(emx_TE)[c(1, (which(sapply(strsplit(colnames(emx_TE)[7:ncol(emx_TE)], '/'), `[[`, 3) == 'invivo_bd')+6))]]
+emx_TE <- emx_TE[,colnames(emx_TE)[c(1, (which(sapply(strsplit(colnames(emx_TE)[7:ncol(emx_TE)], '/'), `[[`, 3) == 'emx')+6))]]
 
 colnames(emx_TE)[2:ncol(emx_TE)] <- paste(sapply(strsplit(colnames(emx_TE)[2:ncol(emx_TE)], '/'), `[[`, 4), unlist(lapply(strsplit(colnames(emx_TE)[2:ncol(emx_TE)], '/'), `[[`, 5)), sep='_')
 colnames(emx_TE)[1] <- 'TE_id'
@@ -177,13 +177,13 @@ emx_TE_vst <- varianceStabilizingTransformation(emx_TE_dds)
 
 # Plot PCA based on TE expression
 emx_TE_pca <- plotPCA(emx_TE_vst) + theme_classic() + ggtitle("PCA - In vitro CRISPR TE expression")
-ggsave(emx_TE_pca, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/invitro_crispr/plots/TE_pca.svg", width=20, height=20, units="cm", dpi=96)
+ggsave(emx_TE_pca, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/npc/plots/TE_pca.svg", width=20, height=20, units="cm", dpi=96)
 
 # Mean plot of individual elements 
 p_TE_meanplot_emx <- meanPlot_cus(emx_TE_exp$Mean, test=emx_TE_res, l=0.5, p=0.05, c1='ko', c2='ctrl',ttl='', repel = F) + labs(title="", subtitle="")
 
-ggsave(p_TE_meanplot_emx, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/invivo_bd/plots/TE_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=320)
-ggsave(p_TE_meanplot_emx, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/invivo_bd/plots/TE_meanplot_0.5_emx.png", dpi=320)
+ggsave(p_TE_meanplot_emx, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/emx/plots/TE_meanplot_0.5.svg", width=20, height=20, units="cm", dpi=320)
+ggsave(p_TE_meanplot_emx, file="/Volumes/Seagate Backup /trim28/09.10.19/1_uniqmapping/emx/plots/TE_meanplot_0.5_emx.png", dpi=320)
 
 
 
