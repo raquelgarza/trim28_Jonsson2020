@@ -52,7 +52,7 @@ ADULT_CHIPSEQ  = config["adult_wt"]
 
 rule all:
     input:
-        "../8_TEchipseq/MMERVK10C/plots/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.means.pdf",
+        "../8_TEchipseq/MMERVK10C/plots/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_stranded50_cas.means.pdf"
 
 rule mapping:
     input:
@@ -514,28 +514,6 @@ rule BamToBw_cut_n_run:
             samtools index -b $sorted
             bamCoverage --normalizeUsingRPKM -b $sorted -o {output}
         """
-rule bam_bigwig_Compare_cut_n_run:
-    input:
-        mouse_1="../1_mapping/chipseq/filtered/cut_n_run/CR021_S10/CR021_S10_bt2.sens-loc.mapq10.sorted.bam",
-        input_mouse_1="../1_mapping/chipseq/filtered/cut_n_run/CR020_S9/CR020_S9_bt2.sens-loc.mapq10.sorted.bam",
-        mouse_2="../1_mapping/chipseq/filtered/cut_n_run/CR045_S2/CR045_S2_bt2.sens-loc.mapq10.sorted.bam",
-        input_mouse_2="../1_mapping/chipseq/filtered/cut_n_run/CR044_S1/CR044_S1_bt2.sens-loc.mapq10.sorted.bam"
-    output:
-        mouse_1="../1_mapping/chipseq/filtered/cut_n_run/CR021_S10/CR021_S10_bt2.sens-loc.mapq10.norm.bw",
-        mouse_2="../1_mapping/chipseq/filtered/cut_n_run/CR045_S2/CR045_S2_bt2.sens-loc.mapq10.norm.bw",
-        mouse_3="../1_mapping/chipseq/filtered/cut_n_run/CR045_S2_CR021_S10_bt2.sens-loc.mapq10.norm.bw"
-    shell:
-        """
-        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
-        ml foss/2016b
-        ml Python/3.5.2
-
-        bamCompare -b1 {input.mouse_1} -b2 {input.input_mouse_1} -o {output.mouse_1} -of bigwig --sampleLength 2000 --scaleFactorsMethod SES --ratio subtract
-        bamCompare -b1 {input.mouse_2} -b2 {input.input_mouse_2} -o {output.mouse_2} -of bigwig --sampleLength 2000 --scaleFactorsMethod SES --ratio subtract
-        bigwigCompare -b1 {output.mouse_2} -b2 {output.mouse_1} -o {output.mouse_3} -of bigwig --ratio mean
-
-        module purge
-        """
 
 rule mapping_adult_chipseq:
     input:
@@ -723,39 +701,6 @@ rule bamCompare_mean_emxctrl:
         module purge
         """
 
-rule bamCompare_mean_adultko:
-    input:
-        sample794="../1_mapping/rnaseq/invivo_adult/ko/794/794Aligned.sortedByCoord.out.bam",
-        sample795="../1_mapping/rnaseq/invivo_adult/ko/795/795Aligned.sortedByCoord.out.bam"
-    output:
-        "../1_mapping/rnaseq/invivo_adult/ko/794_795.mean.bw"
-    shell:
-        """
-        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
-        ml foss/2016b
-        ml Python/3.5.2
-
-        bamCompare -b1 {input.sample794} -b2 {input.sample795} -o {output} -of bigwig --sampleLength 2000 --ratio mean
-
-        module purge
-        """
-rule bamCompare_mean_adultctrl:
-    input:
-        sample797="../1_mapping/rnaseq/invivo_adult/ctrl/797/797Aligned.sortedByCoord.out.bam",
-        sample798="../1_mapping/rnaseq/invivo_adult/ctrl/798/798Aligned.sortedByCoord.out.bam"
-    output:
-        "../1_mapping/rnaseq/invivo_adult/ctrl/797_798.mean.bw"
-    shell:
-        """
-        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
-        ml foss/2016b
-        ml Python/3.5.2
-
-        bamCompare -b1 {input.sample797} -b2 {input.sample798} -o {output} -of bigwig --sampleLength 2000 --ratio mean
-
-        module purge
-        """
-
 rule bamCompare_mean_cas:
     input:
         g3="../1_mapping/rnaseq/invivo_crispr/ko/cas_g3/cas_g3Aligned.sortedByCoord.out.bw",
@@ -802,20 +747,20 @@ rule computeMatrix_MMERVK10C_invitro_crispr:
         invitrog13="../1_mapping/invitro_crispr/ko/g13/invitro_crispr_ko_g13.mean.bw",
         invitrog4="../1_mapping/invitro_crispr/ko/g4/invitro_crispr_ko_g4.mean.bw",
         invitroctrl="../1_mapping/invitro_crispr/ctrl/ctrl/invitro_crispr_ctrl.mean.bw",
-        unstranded50="/projects/fs3/raquelgg/msc/trim28/8_TEchipseq/MMERVK10C/score300/mm10_fullMMERVK10C_unstranded50.bed"
+        stranded50="/projects/fs3/raquelgg/msc/trim28/8_TEchipseq/MMERVK10C/score300/mm10_fullMMERVK10C_stranded50.bed"
     output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.means.mat",
-        trim28_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_Trim28_unstranded50.means.mat",
-        cutnrun_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_unstranded50.means.mat"
+        combined_stranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_stranded50.means.mat",
+        trim28_stranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_Trim28_stranded50.means.mat",
+        cutnrun_stranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_stranded50.means.mat"
     shell:
         """
         ml GCC/5.4.0-2.26  OpenMPI/1.10.3
         ml foss/2016b
         ml Python/3.5.2
 
-        computeMatrix scale-regions -S {input.cutnrun} {input.invitroctrl} {input.invitrog3} {input.invitrog4} {input.invitrog13}  -R {input.unstranded50}  -b 2000 -a 2000 -out {output.combined_unstranded50}
-        computeMatrix scale-regions -S {input.invitrog3} {input.invitrog4} {input.invitrog13} {input.invitroctrl} -R {input.unstranded50} -b 2000 -a 2000 -out {output.trim28_unstranded50}
-        computeMatrix scale-regions -S {input.cutnrun}  -R {input.unstranded50}  -b 2000 -a 2000 -out {output.cutnrun_unstranded50}
+        computeMatrix scale-regions -S {input.cutnrun} {input.invitroctrl} {input.invitrog3} {input.invitrog4} {input.invitrog13}  -R {input.stranded50}  -b 2000 -a 2000 -out {output.combined_stranded50}
+        computeMatrix scale-regions -S {input.invitrog3} {input.invitrog4} {input.invitrog13} {input.invitroctrl} -R {input.stranded50} -b 2000 -a 2000 -out {output.trim28_stranded50}
+        computeMatrix scale-regions -S {input.cutnrun}  -R {input.stranded50}  -b 2000 -a 2000 -out {output.cutnrun_stranded50}
 
         module purge
         """
@@ -824,64 +769,19 @@ rule computeMatrix_MMERVK10C_invivo_bd:
         cutnrun="../1_mapping/chipseq/filtered/cut_n_run/CR045_S2_CR021_S10_bt2.sens-loc.mapq10.norm.bw",
         emxko="../1_mapping/invivo_bd/ko/60ctx2_73ctx2.mean.bw",
         emxctrl="../1_mapping/invivo_bd/ctrl/64ctx2_65ctx2.mean.bw",
-        unstranded50="/projects/fs3/raquelgg/msc/trim28/8_TEchipseq/MMERVK10C/score300/mm10_fullMMERVK10C_unstranded50.bed"
+        stranded50="/projects/fs3/raquelgg/msc/trim28/8_TEchipseq/MMERVK10C/score300/mm10_fullMMERVK10C_stranded50.bed"
     output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_bd/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.means.mat"
+        combined_stranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_bd/mm10_fullMMERVK10C_H3K9me3_Trim28_stranded50.means.mat"
     shell:
         """
         ml GCC/5.4.0-2.26  OpenMPI/1.10.3
         ml foss/2016b
         ml Python/3.5.2
 
-        computeMatrix scale-regions -S {input.cutnrun} {input.emxctrl} {input.emxko} -R {input.unstranded50} -b 2000 -a 2000 -out {output.combined_unstranded50}
+        computeMatrix scale-regions -S {input.cutnrun} {input.emxctrl} {input.emxko} -R {input.stranded50} -b 2000 -a 2000 -out {output.combined_stranded50}
 
         module purge
         """
-rule computeMatrix_MMERVK10C_invivo_bd_per_sample:
-    input:
-        cutnrun1="../1_mapping/chipseq/filtered/cut_n_run/CR021_S10/CR021_S10_bt2.sens-loc.mapq10.norm.bw",
-        cutnrun2="../1_mapping/chipseq/filtered/cut_n_run/CR045_S2/CR045_S2_bt2.sens-loc.mapq10.norm.bw",
-        emxko1="../1_mapping/invivo_bd/ko/60ctx2/60ctx2Aligned.sortedByCoord.out.bw",
-        emxko2="../1_mapping/invivo_bd/ko/73ctx2/73ctx2Aligned.sortedByCoord.out.bw",
-        emxko3="../1_mapping/invivo_bd/ko/76ctx2/76ctx2Aligned.sortedByCoord.out.bw",
-        emxctrl1="../1_mapping/invivo_bd/ctrl/64ctx2/64ctx2Aligned.sortedByCoord.out.bw",
-        emxctrl2="../1_mapping/invivo_bd/ctrl/65ctx2/65ctx2Aligned.sortedByCoord.out.bw",
-        emxctrl3="../1_mapping/invivo_bd/ctrl/77ctx2/77ctx2Aligned.sortedByCoord.out.bw",
-        unstranded50="/projects/fs3/raquelgg/msc/trim28/8_TEchipseq/MMERVK10C/score300/mm10_fullMMERVK10C_unstranded50.bed"
-    output:
-        persample_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_bd/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.per_sample.mat"
-    shell:
-        """
-        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
-        ml foss/2016b
-        ml Python/3.5.2
-
-        computeMatrix scale-regions -S {input.cutnrun1} {input.cutnrun2} {input.emxctrl1} {input.emxctrl2} {input.emxctrl3} {input.emxko1} {input.emxko2} {input.emxko3} -R {input.unstranded50} -b 2000 -a 2000 -out {output.persample_unstranded50}
-
-        module purge
-        """
-rule computeMatrix_MMERVK10C_invivo_crispr_flexcas:
-    input:
-        adultH3K9me3="../1_mapping/chipseq/filtered/h3k9me3/wt/GSM2643045/GSM2643045_bt2.sens-loc.mapq10.norm.bw",
-        flexcas_g3="../1_mapping/invivo_crispr/ko/flexcas_g3/flexcas_g3Aligned.sortedByCoord.out.bw",
-        flexcas_g4="../1_mapping/invivo_crispr/ko/flexcas_g4/flexcas_g4Aligned.sortedByCoord.out.bw",
-        flexcas_g13="../1_mapping/invivo_crispr/ko/flexcas_g13/flexcas_g13Aligned.sortedByCoord.out.bw",
-        flexcas_g3g4g13="../1_mapping/invivo_crispr/ko/flexcas_g3g4g13/flexcas_g3g4g13Aligned.sortedByCoord.out.bw",
-        flexcas_ctrl="../1_mapping/invivo_crispr/ctrl/flexcas_ctrl/flexcas_ctrlAligned.sortedByCoord.out.bw",
-        unstranded50="/projects/fs3/raquelgg/msc/trim28/8_TEchipseq/MMERVK10C/score300/mm10_fullMMERVK10C_unstranded50.bed"
-    output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_flexcas.means.mat"
-    shell:
-        """
-        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
-        ml foss/2016b
-        ml Python/3.5.2
-
-        computeMatrix scale-regions -S {input.adultH3K9me3} {input.flexcas_ctrl} {input.flexcas_g3} {input.flexcas_g4} {input.flexcas_g13} {input.flexcas_g3g4g13} -R {input.unstranded50} -b 2000 -a 2000 -out {output.combined_unstranded50}
-
-        module purge
-        """
-
 rule computeMatrix_MMERVK10C_invivo_crispr_cas:
     input:
         adultH3K9me3="../1_mapping/chipseq/filtered/h3k9me3/wt/GSM2643045/GSM2643045_bt2.sens-loc.mapq10.norm.bw",
@@ -890,245 +790,74 @@ rule computeMatrix_MMERVK10C_invivo_crispr_cas:
         cas_g13="../1_mapping/invivo_crispr/ko/cas_g13/cas_g13Aligned.sortedByCoord.out.bw",
         cas_g3g4g13="../1_mapping/invivo_crispr/ko/cas_g3g4g13/cas_g3g4g13Aligned.sortedByCoord.out.bw",
         cas_ctrl="../1_mapping/invivo_crispr/ctrl/cas_ctrl/cas_ctrlAligned.sortedByCoord.out.bw",
-        unstranded50="/projects/fs3/raquelgg/msc/trim28/8_TEchipseq/MMERVK10C/score300/mm10_fullMMERVK10C_unstranded50.bed"
+        stranded50="/projects/fs3/raquelgg/msc/trim28/8_TEchipseq/MMERVK10C/score300/mm10_fullMMERVK10C_stranded50.bed"
     output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_cas.means.mat"
+        combined_stranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_stranded50_cas.means.mat"
     shell:
         """
         ml GCC/5.4.0-2.26  OpenMPI/1.10.3
         ml foss/2016b
         ml Python/3.5.2
 
-        computeMatrix scale-regions -S {input.adultH3K9me3} {input.cas_ctrl} {input.cas_g3} {input.cas_g4} {input.cas_g13} {input.cas_g3g4g13} -R {input.unstranded50} -b 2000 -a 2000 -out {output.combined_unstranded50}
+        computeMatrix scale-regions -S {input.adultH3K9me3} {input.cas_ctrl} {input.cas_g3} {input.cas_g4} {input.cas_g13} {input.cas_g3g4g13} -R {input.stranded50} -b 2000 -a 2000 -out {output.combined_stranded50}
 
         module purge
         """
-rule computeMatrix_MMERVK10C_invivo_adult:
-    input:
-        adultH3K9me3="../1_mapping/chipseq/filtered/h3k9me3/wt/GSM2643045/GSM2643045_bt2.sens-loc.mapq10.norm.bw",
-        adultko="../1_mapping/rnaseq/invivo_adult/ko/794_795.mean.bw",
-        adultctrl="../1_mapping/rnaseq/invivo_adult/ctrl/797_798.mean.bw",
-        unstranded50="/projects/fs3/raquelgg/msc/trim28/8_TEchipseq/MMERVK10C/score300/mm10_fullMMERVK10C_unstranded50.bed"
-    output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_adult/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.means.mat"
-    shell:
-        """
-        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
-        ml foss/2016b
-        ml Python/3.5.2
 
-        computeMatrix scale-regions -S {input.adultH3K9me3} {input.adultctrl} {input.adultko} -R {input.unstranded50} -b 2000 -a 2000 -out {output.combined_unstranded50}
-
-        module purge
-        """
 rule plotHeatmap_invitro_crispr_MMERVK10Cint_combined_means:
     input:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.means.mat",
-        trim28_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_Trim28_unstranded50.means.mat",
-        cutnrun_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_unstranded50.means.mat"
+        combined_stranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_stranded50.means.mat",
+        trim28_stranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_Trim28_stranded50.means.mat",
+        cutnrun_stranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_stranded50.means.mat"
     output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/plots/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.means.pdf",
-        combined_unstranded50_tab="../8_TEchipseq/MMERVK10C/plots/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.means.tab"
+        combined_stranded50="../8_TEchipseq/MMERVK10C/plots/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_stranded50.means.pdf",
+        combined_stranded50_tab="../8_TEchipseq/MMERVK10C/plots/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_stranded50.means.tab"
     shell:
         """
         ml GCC/5.4.0-2.26  OpenMPI/1.10.3
         ml foss/2016b
         ml Python/3.5.2
 
-        plotHeatmap -m {input.combined_unstranded50} -o {output.combined_unstranded50} --zMin 0 --yMin 0 --yMax 2 \
-        --outFileNameMatrix {output.combined_unstranded50_tab} --plotFileFormat pdf  \
+        plotHeatmap -m {input.combined_stranded50} -o {output.combined_stranded50} --zMin 0 --yMin 0 --yMax 2 \
+        --outFileNameMatrix {output.combined_stranded50_tab} --plotFileFormat pdf  \
         --colorMap Greys Greys OrRd OrRd OrRd \
         --regionsLabel "MMERVK10C" \
         --samplesLabel "H3K9me3" "CRISPR Control" "CRISPR g3 KO" "CRISPR g4 KO" "CRISPR g13 KO" \
         --sortUsing max --sortUsingSamples 3
 
         """
-rule plotProfile_invitro_crispr_MMERVK10Cint_combined_means:
-    input:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.means.mat",
-        trim28_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_Trim28_unstranded50.means.mat",
-        cutnrun_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_unstranded50.means.mat",
-    output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/plots/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_profile.means.pdf",
-    shell:
-        """
-        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
-        ml foss/2016b
-        ml Python/3.5.2
-
-        plotProfile --yMin 0 -m {input.combined_unstranded50} -o {output.combined_unstranded50} --colors "#9b84cc" "#8c8c8c" "#a1cc84" "#f5c92a" "#d16f54" --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3" "CRISPR Control" "CRISPR g3 KO" "CRISPR g4 KO" "CRISPR g13 KO"
-        plotProfile --yMin 0 -m {input.combined_unstranded50} -o {output.combined_unstranded50_join} --colors "#9b84cc" "#8c8c8c" "#a1cc84" "#f5c92a" "#d16f54" --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3" "CRISPR Control" "CRISPR g3 KO" "CRISPR g4 KO" "CRISPR g13 KO" --perGroup --plotHeight 17 --plotWidth 20 --plotFileFormat pdf
-
-        module purge
-        """
-
-rule plotHeatmap_invitro_crispr_MMERVK10Cint_combined_means_allsamples:
-    input:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_rnaseq_allsamples_unstranded50.means.mat"
-    output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/plots/score300/invitro_crispr/mm10_fullMMERVK10C_rnaseq_allsamples_unstranded50.means.pdf",
-        combined_unstranded50_tab="../8_TEchipseq/MMERVK10C/plots/score300/invitro_crispr/mm10_fullMMERVK10C_rnaseq_allsamples_unstranded50.means.tab"
-    shell:
-        """
-        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
-        ml foss/2016b
-        ml Python/3.5.2
-
-        plotHeatmap -m {input.combined_unstranded50} -o {output.combined_unstranded50} --zMin 0 --yMin 0 --outFileNameMatrix {output.combined_unstranded50_tab} --plotFileFormat pdf  --colorMap Greens --regionsLabel "MMERVK10C" --samplesLabel "G3_1" "G3_2" "G13_1" "G13_2" "G4_1" "G4_2" "Control_1" "Control_2" --sortUsing max --sortUsingSamples 1
-
-        module purge
-        """
 rule plotHeatmap_invivo_bd_MMERVK10Cint_combined_means:
     input:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_bd/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.means.mat"
+        combined_stranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_bd/mm10_fullMMERVK10C_H3K9me3_Trim28_stranded50.means.mat"
     output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/plots/score300/invivo_bd/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.means.pdf"
+        combined_stranded50="../8_TEchipseq/MMERVK10C/plots/score300/invivo_bd/mm10_fullMMERVK10C_H3K9me3_Trim28_stranded50.means.pdf"
     shell:
         """
         ml GCC/5.4.0-2.26  OpenMPI/1.10.3
         ml foss/2016b
         ml Python/3.5.2
 
-        plotHeatmap -m {input.combined_unstranded50} -o {output.combined_unstranded50} --zMin 0 --yMin 0  --plotFileFormat pdf  \
+        plotHeatmap -m {input.combined_stranded50} -o {output.combined_stranded50} --zMin 0 --yMin 0  --plotFileFormat pdf  \
         --colorMap Greys Greys OrRd \
         --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3" "Emx - Control" "Emx - KO" \
         --sortUsing max --sortUsingSamples 3
 
         module purge
         """
-rule plotHeatmap_invivo_bd_MMERVK10Cint_per_sample:
-    input:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_bd/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.per_sample.mat"
-    output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/plots/score300/invivo_bd/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.per_sample.pdf"
-    shell:
-        """
-        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
-        ml foss/2016b
-        ml Python/3.5.2
-
-        plotHeatmap -m {input.combined_unstranded50} -o {output.combined_unstranded50} --zMin 0 --yMin 0  --plotFileFormat pdf  --colorList "#e8c3c3,#944040" "#e8c3c3,#944040" "#e8e8e8,#616161" "#e8e8e8,#616161" "#e8e8e8,#616161" "#e8c3c3,#f8686d" "#e8c3c3,#f8686d" "#e8c3c3,#f8686d" --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3 (1)" "H3K9me3 (2)" "Emx - Control (1)" "Emx - Control (2)" "Emx - Control (3)" "Emx - KO (1)" "Emx - KO (2)" "Emx - KO (3)" --sortUsing max --sortUsingSamples 3
-
-        module purge
-        """
-rule plotProfile_invivo_bd_MMERVK10Cint_combined_means:
-    input:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_bd/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.means.mat",
-    output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/plots/score300/invivo_bd/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_profile.means.pdf",
-    shell:
-        """
-        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
-        ml foss/2016b
-        ml Python/3.5.2
-
-        plotProfile --yMin 0 --yMax 2 -m {input.combined_unstranded50} -o {output.combined_unstranded50} --colors "#9b84cc" "#8c8c8c" "#cc6447" --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3" "Emx - Control" "Emx - KO"
-        plotProfile --yMin 0 --yMax 2 -m {input.combined_unstranded50} -o {output.combined_unstranded50_join} --colors "#9b84cc" "#8c8c8c" "#cc6447" --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3" "Emx - Control" "Emx - KO" --perGroup --plotHeight 17 --plotWidth 20 --plotFileFormat pdf
-
-        module purge
-
-        """
-rule plotHeatmap_invivo_crispr_MMERVK10Cint_combined_means_flexcas:
-    input:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_flexcas.means.mat",
-    output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/plots/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_flexcas.means.pdf",
-    shell:
-        """
-        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
-        ml foss/2016b
-        ml Python/3.5.2
-
-        plotHeatmap -m {input.combined_unstranded50} -o {output.combined_unstranded50} --zMin 0 --yMin 0 --yMax 2  --plotFileFormat pdf  --colorList "white,#944040" "white,#616161" "white,#7d7840" "white,#d1b366" "white,#994848" "white,#a95537" --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3" "Control" "Flexcas g3" "Flexcas g4" "Flexcas g13" "Flexcas g3g4g13" --sortUsing max --sortUsingSamples 3
-
-        module purge
-
-        """
-rule plotProfile_invivo_crispr_MMERVK10Cint_combined_means_flexcas:
-    input:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_flexcas.means.mat",
-    output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/plots/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_flexcas_profile.means.pdf",
-        combined_unstranded50_join="../8_TEchipseq/MMERVK10C/plots/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_flexcas_profilejoin.means.pdf",
-    shell:
-        """
-        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
-        ml foss/2016b
-        ml Python/3.5.2
-
-        plotProfile --yMin 0 --yMax 2 -m {input.combined_unstranded50} -o {output.combined_unstranded50} --colors "#9b84cc" "#8c8c8c" "#a1cc84" "#f5c92a" "#d16f54" "#382ac9" --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3" "Control" "Flexcas g3" "Flexcas g4" "Flexcas g13" "Flexcas g3g4g13"
-        plotProfile --yMin 0 --yMax 2 -m {input.combined_unstranded50} -o {output.combined_unstranded50_join} --colors "#9b84cc" "#8c8c8c" "#a1cc84" "#f5c92a" "#d16f54" "#382ac9" --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3" "Control" "Flexcas g3" "Flexcas g4" "Flexcas g13" "Flexcas g3g4g13" --perGroup --plotHeight 17 --plotWidth 20 --plotFileFormat pdf
-
-        module purge
-
-        """
 rule plotHeatmap_invivo_crispr_MMERVK10Cint_combined_means_cas:
     input:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_cas.means.mat",
+        combined_stranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_stranded50_cas.means.mat",
     output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/plots/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_cas.means.pdf",
+        combined_stranded50="../8_TEchipseq/MMERVK10C/plots/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_stranded50_cas.means.pdf",
     shell:
         """
         ml GCC/5.4.0-2.26  OpenMPI/1.10.3
         ml foss/2016b
         ml Python/3.5.2
 
-        plotHeatmap -m {input.combined_unstranded50} -o {output.combined_unstranded50} --zMin 0 --yMin 0 --yMax 2  --plotFileFormat pdf  --colorList "white,#944040" "white,#616161" "white,#7d7840"  "white,#d1b366" "white,#994848" "white,#a95537" --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3" "Control" "Cas g3" "Cas g4" "Cas g13" "Cas g3g4g13" --sortUsing max --sortUsingSamples 3
-
-        module purge
-        """
-rule plotProfile_invivo_crispr_MMERVK10Cint_combined_means_cas:
-    input:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_cas.means.mat",
-    output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/plots/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_cas_profile.means.pdf",
-        combined_unstranded50_join="../8_TEchipseq/MMERVK10C/plots/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_cas_profilejoin.means.pdf",
-    shell:
-        """
-        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
-        ml foss/2016b
-        ml Python/3.5.2
-
-        plotProfile --yMin 0 --yMax 2 -m {input.combined_unstranded50} -o {output.combined_unstranded50} --colors "#9b84cc" "#8c8c8c" "#a1cc84" "#f5c92a" "#d16f54" "#382ac9" --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3" "Control" "Cas g3" "Cas g4" "Cas g13" "Cas g3g4g13"
-        plotProfile --yMin 0 --yMax 2 -m {input.combined_unstranded50} -o {output.combined_unstranded50_join} --colors "#9b84cc" "#8c8c8c" "#a1cc84" "#f5c92a" "#d16f54" "#382ac9" --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3" "Control" "Cas g3" "Cas g4" "Cas g13" "Cas g3g4g13" --perGroup --plotHeight 17 --plotWidth 20 --plotFileFormat pdf
-
-        module purge
-        """
-
-rule plotHeatmap_invivo_adult_MMERVK10Cint_combined_means:
-    input:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_adult/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.means.mat"
-    output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/plots/score300/invivo_adult/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.means.pdf"
-    shell:
-        """
-        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
-        ml foss/2016b
-        ml Python/3.5.2
-
-        plotHeatmap -m {input.combined_unstranded50} -o {output.combined_unstranded50} --zMin 0 --yMin 0 --yMax 2 \
-        --plotFileFormat pdf  \
-        --colorMap Greys Greys OrRd \
-        --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3" "Adult - Control" "Adult - KO" \
-        --sortUsing max --sortUsingSamples 3
-
-        module purge
-        """
-rule plotProfile_invivo_adult_MMERVK10Cint_combined_means:
-    input:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_adult/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50.means.mat",
-        combined_unstranded100="../8_TEchipseq/MMERVK10C/matrices/score300/invivo_adult/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded100.means.mat",
-    output:
-        combined_unstranded50="../8_TEchipseq/MMERVK10C/plots/score300/invivo_adult/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_profile.means.pdf",
-        combined_unstranded50_join="../8_TEchipseq/MMERVK10C/plots/score300/invivo_adult/mm10_fullMMERVK10C_H3K9me3_Trim28_unstranded50_profilejoin.means.pdf",
-    shell:
-        """
-        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
-        ml foss/2016b
-        ml Python/3.5.2
-
-        plotProfile --yMin 0 --yMax 2 -m {input.combined_unstranded50} -o {output.combined_unstranded50} --colors "#9b84cc" "#8c8c8c" "#cc6447" --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3" "Adult - Control" "Adult - KO"
-        plotProfile --yMin 0 --yMax 2 -m {input.combined_unstranded50} -o {output.combined_unstranded50_join} --colors "#9b84cc" "#8c8c8c" "#cc6447" --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3" "Adult - Control" "Adult - KO" --perGroup --plotHeight 17 --plotWidth 20 --plotFileFormat pdf
+        plotHeatmap -m {input.combined_stranded50} -o {output.combined_stranded50} --zMin 0 \
+        --yMin 0 --yMax 2  --plotFileFormat pdf \
+         --colorMap Greys Greys OrRd OrRd OrRd OrRd --regionsLabel "MMERVK10C" --samplesLabel "H3K9me3" "Control" "Cas g3" "Cas g4" "Cas g13" "Cas g3g4g13" --sortUsing max --sortUsingSamples 3
 
         module purge
         """
