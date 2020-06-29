@@ -187,23 +187,12 @@ samples_str:
 chipseq:
 - CR020_S9
 - CR021_S10
-- CR045_S2
-- CR044_S1
-- kap1_chip1
-- kap1_chip2
-- kap1_input
 - GSM2643042
 - GSM2643045
 - GSM2643047
 cut_n_run:
 - CR020_S9
 - CR021_S10
-- CR045_S2
-- CR044_S1
-kap1:
-- kap1_chip1
-- kap1_chip2
-- kap1_input
 adult_wt:
 - GSM2643042
 - GSM2643045
@@ -211,23 +200,14 @@ adult_wt:
 cut_n_run_location:
 - CR020_S9/CR020_S9
 - CR021_S10/CR021_S10
-- CR045_S2/CR045_S2
-- CR044_S1/CR044_S1
 chipseq_location:
 - wt/GSM2643042
 - wt/GSM2643045
 - wt/GSM2643047
 cut_n_run_location_wo_inputs:
 - cut_n_run/CR021_S10/CR021_S10
-- cut_n_run/CR045_S2/CR045_S2
 cut_n_run_location_inputs:
 - cut_n_run/CR020_S9/CR020_S9
-- cut_n_run/CR044_S1/CR044_S1
-kap1_chip_location_wo_input:
-- kap1_chip/kap1_chip1/kap1_chip1
-- kap1_chip/kap1_chip2/kap1_chip2
-kap1_chip_location_input:
-- kap1_chip/kap1_input/kap1_input
 adult_wt_location_wo_input:
 - h3k9me3/wt/GSM2643042
 - h3k9me3/wt/GSM2643045
