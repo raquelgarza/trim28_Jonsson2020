@@ -607,17 +607,17 @@ invivo_crispr_gene_norm_trim28 <- as.data.frame(t(invivo_crispr_gene_norm[which(
 colnames(invivo_crispr_gene_norm_trim28) <- 'value'
 invivo_crispr_gene_norm_trim28$sample <- rownames(invivo_crispr_gene_norm_trim28)
 invivo_crispr_gene_norm_trim28$Condition <- ifelse(invivo_crispr_coldata[as.character(invivo_crispr_gene_norm_trim28$sample),'condition'] == 'ko', 'Knock out', 'Control')
-invivo_crispr_gene_norm_trim28$Condition <- ifelse(endsWith(invivo_crispr_gene_norm_trim28$sample, 'ctrl'), 'Control', ifelse(startsWith(invivo_crispr_gene_norm_trim28$sample, 'flexcas'), 'FlexCas', 'Cas'))
-invivo_crispr_gene_norm_trim28$Condition <- factor(invivo_crispr_gene_norm_trim28$Condition, levels = c('Control', 'Cas', 'FlexCas'))
-invivo_crispr_gene_norm_trim28$gRNA <- ifelse(endsWith(invivo_crispr_gene_norm_trim28$sample, 'ctrl'), 'Control', ifelse(startsWith(invivo_crispr_gene_norm_trim28$sample, 'flexcas'), paste('FlexCas', unlist(lapply(str_split(invivo_crispr_gene_norm_trim28$sample, '_'), `[[`, 2))), paste('Cas', unlist(lapply(str_split(invivo_crispr_gene_norm_trim28$sample, '_'), `[[`, 2)))))
-invivo_crispr_gene_norm_trim28$gRNA <- factor(invivo_crispr_gene_norm_trim28$gRNA, levels=c('Control', 'Cas g3', 'Cas g4', 'Cas g13', 'Cas g3g4g13', 'FlexCas g3', 'FlexCas g4', 'FlexCas g13', 'FlexCas g3g4g13'))
+invivo_crispr_gene_norm_trim28$Condition <- ifelse(endsWith(invivo_crispr_gene_norm_trim28$sample, 'ctrl'), 'Control', ifelse(startsWith(invivo_crispr_gene_norm_trim28$sample, 'stopcas'), 'stopCas', 'Cas'))
+invivo_crispr_gene_norm_trim28$Condition <- factor(invivo_crispr_gene_norm_trim28$Condition, levels = c('Control', 'Cas', 'stopCas'))
+invivo_crispr_gene_norm_trim28$gRNA <- ifelse(endsWith(invivo_crispr_gene_norm_trim28$sample, 'ctrl'), 'Control', ifelse(startsWith(invivo_crispr_gene_norm_trim28$sample, 'stopcas'), paste('stopCas', unlist(lapply(str_split(invivo_crispr_gene_norm_trim28$sample, '_'), `[[`, 2))), paste('Cas', unlist(lapply(str_split(invivo_crispr_gene_norm_trim28$sample, '_'), `[[`, 2)))))
+invivo_crispr_gene_norm_trim28$gRNA <- factor(invivo_crispr_gene_norm_trim28$gRNA, levels=c('Control', 'Cas g3', 'Cas g4', 'Cas g13', 'Cas g3g4g13', 'stopCas g3', 'stopCas g4', 'stopCas g13', 'stopCas g3g4g13'))
 
 p_trim28_invivocrispr <- ggplot(invivo_crispr_gene_norm_trim28[rownames(invivo_crispr_gene_norm_trim28),], aes(x=Condition, y=value, fill=Condition)) + geom_boxplot(alpha=0.5)+ theme_classic() + labs(y="Median-of-ratios normalized read count", title='Trim28 invivo CRISPR knock out')+
   geom_point(aes(colour=gRNA), size=5) +
   guides(fill=FALSE, col = guide_legend(nrow = 5))+
   scale_colour_manual(values=c('Cas g13'="#3c913a", 'Cas g3'="#7fe87d", 'Cas g4'="#51c44f", 'Cas g3g4g13'="#255c24", 
                                Control="#eb4444", 
-                               'FlexCas g13'="#418796", 'FlexCas g3'="#6ae0fc", 'FlexCas g4'="#56b2c7", 'FlexCas g3g4g13'="#234952")) +
+                               'stopCas g13'="#418796", 'stopCas g3'="#6ae0fc", 'stopCas g4'="#56b2c7", 'stopCas g3g4g13'="#234952")) +
   labs(colour='Samples') +
   
   theme(
@@ -669,18 +669,19 @@ invivo_crispr_cas_TE_res <- results(invivo_crispr_cas_TE_dds)
 invivo_crispr_cas_TE_exp <- getAverage(invivo_crispr_cas_TE_dds)
 # TE mean plot (cas experiment)
 p_TE_meanplot_invivocrispr_cas <- meanPlot_cus(invivo_crispr_cas_TE_exp$Mean, test=invivo_crispr_cas_TE_res, l=0.5,p=0.05, c1='ko', c2='ctrl',ttl='TE DEA in invivo CRISPR KO experiment - Cas', repel = FALSE, col2 = 'black') + labs(title="", subtitle="")
+ggsave(p_TE_meanplot_invivocrispr_cas, file="6_TEtranscripts/invivo_crispr/plots/cas_TE_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
-# Create the metadata for the FlexCas experiment
-invivo_crispr_flexcas_coldata <- subset(invivo_crispr_coldata, startsWith(invivo_crispr_coldata$samples, 'flexcas') | invivo_crispr_coldata$condition == 'ctrl')
+# Create the metadata for the stopCas experiment
+invivo_crispr_stopcas_coldata <- subset(invivo_crispr_coldata, startsWith(invivo_crispr_coldata$samples, 'stopcas') | invivo_crispr_coldata$condition == 'ctrl')
 # TE DEA testing for differences in condition (Trim28 vs control) for the cas experiment
-invivo_crispr_flexcas_TE_dds <- DESeqDataSetFromMatrix(invivo_crispr_TE[,rownames(invivo_crispr_flexcas_coldata)], invivo_crispr_flexcas_coldata, design = ~ condition)
-invivo_crispr_flexcas_TE_dds <- DESeq(invivo_crispr_flexcas_TE_dds)
-invivo_crispr_flexcas_TE_res <- results(invivo_crispr_flexcas_TE_dds)
-invivo_crispr_flexcas_TE_exp <- getAverage(invivo_crispr_flexcas_TE_dds)
-invivo_crispr_flexcas_TE_res_df <- as.data.frame(invivo_crispr_flexcas_TE_res)
-View(invivo_crispr_TE[,rownames(invivo_crispr_flexcas_coldata)])
-p_TE_meanplot_invivocrispr_flexcas <- meanPlot_cus(invivo_crispr_flexcas_TE_exp$Mean, test=invivo_crispr_flexcas_TE_res, l=0.5,p=0.05, c1='ko', c2='ctrl',ttl='TE DEA in invivo CRISPR KO experiment - flexcas', repel = F, col3 = 'firebrick3', col2 = 'black') + labs(title="", subtitle="")
+invivo_crispr_stopcas_TE_dds <- DESeqDataSetFromMatrix(invivo_crispr_TE[,rownames(invivo_crispr_stopcas_coldata)], invivo_crispr_stopcas_coldata, design = ~ condition)
+invivo_crispr_stopcas_TE_dds <- DESeq(invivo_crispr_stopcas_TE_dds)
+invivo_crispr_stopcas_TE_res <- results(invivo_crispr_stopcas_TE_dds)
+invivo_crispr_stopcas_TE_exp <- getAverage(invivo_crispr_stopcas_TE_dds)
+invivo_crispr_stopcas_TE_res_df <- as.data.frame(invivo_crispr_stopcas_TE_res)
 
+p_TE_meanplot_invivocrispr_stopcas <- meanPlot_cus(invivo_crispr_stopcas_TE_exp$Mean, test=invivo_crispr_stopcas_TE_res, l=0.5,p=0.05, c1='ko', c2='ctrl',ttl='TE DEA in invivo CRISPR KO experiment - stopcas', repel = F, col3 = 'firebrick3', col2 = 'black') + labs(title="", subtitle="")
+ggsave(p_TE_meanplot_invivocrispr_stopcas, file="6_TEtranscripts/invivo_crispr/plots/stopcas_TE_meanplot_0.5.png", width=20, height=20, units="cm", dpi=320)
 
 # Adult invivo: FLOXED ----
 # Read output from TEtranscripts
