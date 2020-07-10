@@ -52,7 +52,8 @@ ADULT_CHIPSEQ  = config["adult_wt"]
 
 rule all:
     input:
-        "../8_TEchipseq/MMERVK10C/plots/score300/invivo_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_stranded50_cas.means.pdf"
+        "../8_TEchipseq/MMERVK10C/plots/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_stranded50.means.pdf"
+        #"../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_stranded50.means.mat"
 
 rule mapping:
     input:
@@ -640,7 +641,7 @@ rule bamCompare_mean_invitrog4:
         sample848="../1_mapping/rnaseq/invitro_crispr/ko/g4/848/848Aligned.sortedByCoord.out.bam",
         sample873="../1_mapping/rnaseq/invitro_crispr/ko/g4/873/873Aligned.sortedByCoord.out.bam"
     output:
-        g4="../1_mapping/invitro_crispr/ko/g4/invitro_crispr_ko_g4.mean.bw"
+        g4="../1_mapping/rnaseq/invitro_crispr/ko/g4/invitro_crispr_ko_g4.mean.bw"
     shell:
         """
         ml GCC/5.4.0-2.26  OpenMPI/1.10.3
@@ -724,6 +725,23 @@ rule bamCompare_mean_cas:
         module purge
         """
 
+rule bamCompare_subtract_cutnrun:
+    input:
+        signal="../1_mapping/chipseq/filtered/cut_n_run/CR021_S10/CR021_S10_bt2.sens-loc.mapq10.sorted.bam",
+        igg="../1_mapping/chipseq/filtered/cut_n_run/CR020_S9/CR020_S9_bt2.sens-loc.mapq10.sorted.bam"
+    output:
+        "../1_mapping/chipseq/filtered/cut_n_run/CR020_S9_CR021_10_bt2.sens-loc.mapq10.sorted.bw"
+    shell:
+        """
+        ml GCC/5.4.0-2.26  OpenMPI/1.10.3
+        ml foss/2016b
+        ml Python/3.5.2
+
+        bamCompare -b1 {input.signal} -b2 {input.igg} -o {output} -of bigwig --sampleLength 2000 --ratio subtract
+
+        module purge
+        """
+
 rule fullMMERVK10C:
     input:
         fullERVs="../8_TEchipseq/mm10_fullERVs_score300.bed",
@@ -742,11 +760,11 @@ rule fullMMERVK10C:
 
 rule computeMatrix_MMERVK10C_invitro_crispr:
     input:
-        cutnrun="../1_mapping/chipseq/filtered/cut_n_run/CR021_S10/CR021_S10_bt2.sens-loc.mapq10.norm.bw",
-        invitrog3="../1_mapping/invitro_crispr/ko/g3/invitro_crispr_ko_g3.mean.bw",
-        invitrog13="../1_mapping/invitro_crispr/ko/g13/invitro_crispr_ko_g13.mean.bw",
-        invitrog4="../1_mapping/invitro_crispr/ko/g4/invitro_crispr_ko_g4.mean.bw",
-        invitroctrl="../1_mapping/invitro_crispr/ctrl/ctrl/invitro_crispr_ctrl.mean.bw",
+        cutnrun="../1_mapping/chipseq/filtered/cut_n_run/CR020_S9_CR021_10_bt2.sens-loc.mapq10.sorted.bw",
+        invitrog3="../1_mapping/rnaseq/invitro_crispr/ko/g3/invitro_crispr_ko_g3.mean.bw",
+        invitrog13="../1_mapping/rnaseq/invitro_crispr/ko/g13/invitro_crispr_ko_g13.mean.bw",
+        invitrog4="../1_mapping/rnaseq/invitro_crispr/ko/g4/invitro_crispr_ko_g4.mean.bw",
+        invitroctrl="../1_mapping/rnaseq/invitro_crispr/ctrl/ctrl/invitro_crispr_ctrl.mean.bw",
         stranded50="/projects/fs3/raquelgg/msc/trim28/8_TEchipseq/MMERVK10C/score300/mm10_fullMMERVK10C_stranded50.bed"
     output:
         combined_stranded50="../8_TEchipseq/MMERVK10C/matrices/score300/invitro_crispr/mm10_fullMMERVK10C_H3K9me3_Trim28_stranded50.means.mat",
