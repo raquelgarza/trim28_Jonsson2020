@@ -301,7 +301,7 @@ ggsave(p_trim28_emx, file='6_TEtranscripts/emx/plots/trim28.svg', width=20, heig
 
 # Subset of upregulated genes to check for GO term enrichment
 emx_upreg <- as.data.frame(as.matrix(subset(emx_genes_res, emx_genes_res$log2FoldChange > 0.5 & emx_genes_res$padj < 0.05)))
-emx_upreg <- merge(emx_upreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
+emx_upreg <- merge(emx_upreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id', all.x=T)
 colnames(emx_upreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'P-adj', 'Gene Name')
 
 write.xlsx(emx_upreg[,c(8,1,3,7)], '6_TEtranscripts/emx/upregulated_genes_emx.xlsx', row.names = FALSE, col.names=TRUE)
@@ -309,7 +309,7 @@ write.table(unique(emx_upreg$`Gene Name`), 'GO_analysis/emx/upregulated/sign_upr
 
 # Subset of downregulated genes to check for GO term enrichment
 emx_dwreg <- as.data.frame(as.matrix(subset(emx_genes_res, emx_genes_res$log2FoldChange < -0.5 & emx_genes_res$padj < 0.05)))
-emx_dwreg <- merge(emx_dwreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
+emx_dwreg <- merge(emx_dwreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id', all.x=T)
 colnames(emx_dwreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'P-adj', 'Gene Name')
 
 write.xlsx(emx_dwreg[,c(8,1,3,7)], '6_TEtranscripts/emx/downregulated_genes_emx.xlsx', row.names = FALSE, col.names=TRUE)
@@ -493,7 +493,7 @@ ggsave(p_trim28_npc, file="6_TEtranscripts/npc/plots/trim28.svg", width=20, heig
 
 # Subset of upregulated genes to check for GO term enrichment
 npc_upreg <- as.data.frame(as.matrix(subset(npc_genes_res, npc_genes_res$log2FoldChange > 0.5 & npc_genes_res$padj < 0.05)))
-npc_upreg <- merge(npc_upreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
+npc_upreg <- merge(npc_upreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id', all.x=T)
 colnames(npc_upreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'P-adj', 'Gene Name')
 
 write.xlsx(npc_upreg[,c(8,1,3,7)], '6_TEtranscripts/npc/upregulated_genes_npc.xlsx', row.names = FALSE, col.names=TRUE)
@@ -501,7 +501,7 @@ write.table(unique(npc_upreg$`Gene Name`), 'GO_analysis/npc/upregulated/sign_upr
 
 # Subset of downregulated genes to check for GO term enrichment
 npc_dwnreg <- as.data.frame(as.matrix(subset(npc_genes_res, npc_genes_res$log2FoldChange < -0.5 & npc_genes_res$padj < 0.05)))
-npc_dwnreg <- merge(npc_dwnreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
+npc_dwnreg <- merge(npc_dwnreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id', all.x=T)
 colnames(npc_dwnreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'P-adj', 'Gene Name')
 
 write.xlsx(npc_dwnreg[,c(8,1,3,7)], '6_TEtranscripts/npc/downregulated_genes_npc.xlsx', row.names = FALSE, col.names=TRUE)
@@ -631,13 +631,13 @@ ggsave(p_trim28_invivocrispr, file="6_TEtranscripts/invivo_crispr/plots/trim28.s
 
 # Subset of upregulated genes to check for GO term enrichment
 invivo_crispr_upreg <- as.data.frame(as.matrix(subset(invivo_crispr_genes_res, invivo_crispr_genes_res$log2FoldChange > 0.5 & invivo_crispr_genes_res$padj < 0.05)))
-invivo_crispr_upreg <- merge(invivo_crispr_upreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
+invivo_crispr_upreg <- merge(invivo_crispr_upreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id', all.x=T)
 colnames(invivo_crispr_upreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'P-adj', 'Gene Name')
 write.xlsx(invivo_crispr_upreg[,c(8,1,3,7)], '6_TEtranscripts/invivo_crispr/upregulated_genes_invivocrispr.xlsx', row.names = FALSE, col.names=TRUE)
 write.table(unique(invivo_crispr_upreg$`Gene Name`), 'GO_analysis/invivo_crispr/upregulated/sign_upreg_genes.txt', row.names = FALSE, col.names=FALSE, quote = F)
 
 invivo_crispr_dwnreg <- as.data.frame(as.matrix(subset(invivo_crispr_genes_res, invivo_crispr_genes_res$log2FoldChange < -0.5 & invivo_crispr_genes_res$padj < 0.05)))
-invivo_crispr_dwnreg <- merge(invivo_crispr_dwnreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
+invivo_crispr_dwnreg <- merge(invivo_crispr_dwnreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id', all.x=T)
 colnames(invivo_crispr_dwnreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'P-adj', 'Gene Name')
 write.xlsx(invivo_crispr_dwnreg[,c(8,1,3,7)], '6_TEtranscripts/invivo_crispr/dwnregulated_genes_invivocrispr.xlsx', row.names = FALSE, col.names=TRUE)
 write.table(unique(invivo_crispr_dwnreg$`Gene Name`), 'GO_analysis/invivo_crispr/downregulated/sign_downreg_genes.txt', row.names = FALSE, col.names=FALSE, quote = F)
@@ -738,14 +738,14 @@ ggsave(p_trim28_invivoadult, file="6_TEtranscripts/invivo_crispr_trim28fl/plots/
 
 # Subset of upregulated genes to check for GO term enrichment
 invivo_crispr_trim28fl_upreg <- as.data.frame(as.matrix(subset(invivo_crispr_trim28fl_genes_res, invivo_crispr_trim28fl_genes_res$log2FoldChange > 0.5 & invivo_crispr_trim28fl_genes_res$padj < 0.05)))
-invivo_crispr_trim28fl_upreg <- merge(invivo_crispr_trim28fl_upreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
+invivo_crispr_trim28fl_upreg <- merge(invivo_crispr_trim28fl_upreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id', all.x=T)
 colnames(invivo_crispr_trim28fl_upreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'P-adj', 'Gene Name')
 write.xlsx(invivo_crispr_trim28fl_upreg[,c(8,1,3,7)], '6_TEtranscripts/invivo_crispr_trim28fl/upregulated_genes_invivo_crispr_trim28fl_upreg.xlsx', row.names = FALSE, col.names=TRUE)
 write.table(unique(invivo_crispr_trim28fl_upreg$`Gene Name`), 'GO_analysis/invivo_crispr_trim28fl/upregulated/sign_upreg_genes.txt', row.names = FALSE, col.names=FALSE, quote = F)
 
 # Subset of downregulated genes to check for GO term enrichment
 invivo_crispr_trim28fl_dwnreg <- as.data.frame(as.matrix(subset(invivo_crispr_trim28fl_genes_res, invivo_crispr_trim28fl_genes_res$log2FoldChange < -0.5 & invivo_crispr_trim28fl_genes_res$padj < 0.05)))
-invivo_crispr_trim28fl_dwnreg <- merge(invivo_crispr_trim28fl_dwnreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
+invivo_crispr_trim28fl_dwnreg <- merge(invivo_crispr_trim28fl_dwnreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id', all.x=T)
 colnames(invivo_crispr_trim28fl_dwnreg) <- c('Gene ID', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'P-adj', 'Gene Name')
 write.xlsx(invivo_crispr_trim28fl_dwnreg[,c(8,1,3,7)], '6_TEtranscripts/invivo_crispr_trim28fl/downregulated_genes_invivo_crispr_trim28fl_upreg.xlsx', row.names = FALSE, col.names=TRUE)
 write.table(unique(invivo_crispr_trim28fl_dwnreg$`Gene Name`), 'GO_analysis/invivo_crispr_trim28fl/downregulated/sign_downreg_genes.txt', row.names = FALSE, col.names=FALSE, quote = F)
@@ -800,10 +800,12 @@ ggsave(emx_invivo_crispr_trim28fl_dwreg_venn, file="/Volumes/seagatebackup/trim2
 
 # EMX GO analysis ----
 # Upregulated genes in Emx that are not upregulated in adult invivo crispr (floxed) KO 
-emx_upreg <- merge(emx_upreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id')
+emx_upreg <- merge(emx_upreg, unique(transcript_gene[,c(2,3)]), by.x='row.names', by.y='gene_id', all.x=T)
 colnames(emx_upreg)[1] <- 'Gene id'
 colnames(emx_upreg)[ncol(emx_upreg)] <- 'Gene Name'
 paste(emx_upreg[which(!emx_upreg$`Gene Name` %in% invivo_crispr_trim28fl_upreg$`Gene Name`),c(8)], collapse = '|')
+emx_upreg[which(!emx_upreg$`Gene Name` %in% invivo_crispr_trim28fl_upreg$`Gene Name`),]
+
 write.xlsx(emx_upreg[which(!emx_upreg$`Gene Name` %in% invivo_crispr_trim28fl_upreg$`Gene Name`),c(8,1,3,7)], 'GO_analysis/emx/upregulated/upregulated_genes_emx_not_invivo_crispr_trim28fl.xlsx', col.names = T, row.names = F)
 write(unique(emx_upreg[which(!emx_upreg$`Gene Name` %in% invivo_crispr_trim28fl_upreg$`Gene Name`),'Gene Name']), 'GO_analysis/emx/upregulated/sign_upreg_genes_not_in_adult.txt')
 
