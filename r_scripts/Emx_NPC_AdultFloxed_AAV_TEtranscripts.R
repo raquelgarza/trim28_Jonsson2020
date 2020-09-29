@@ -437,7 +437,7 @@ npc_genes_res <- results(npc_genes_dds)
 npc_genes_exp <- getAverage(npc_genes_dds)
 
 npc_genes_vst <- varianceStabilizingTransformation(npc_genes_dds)
-npc_gene_pca <- plotPCA(npc_genes_vst) + ylim(c(-30,20)) + theme_classic() + ggtitle("PCA - In vitro CRISPR gene expression")
+npc_gene_pca <- plotPCA(npc_genes_vst) + ylim(c(-30,20)) + theme_classic() + ggtitle("PCA - NPC gene expression")
 ggsave(npc_gene_pca, file="6_TEtranscripts/npc/plots/gene_pca.svg", width=20, height=20, units="cm", dpi=96)
 
 
